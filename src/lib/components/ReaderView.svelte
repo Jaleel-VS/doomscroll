@@ -45,6 +45,10 @@
 			l: () => reader.toggle(reader.likes, id),
 			b: () => reader.toggle(reader.bookmarks, id),
 			t: () => reader.toggle(reader.reposts, id),
+			r: () => {
+				reader.expanded.add(id);
+				requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-i="${id}"] textarea`)?.focus());
+			},
 			'/': () => {
 				reader.drawer = innerWidth < 1000;
 				requestAnimationFrame(() => document.getElementById('search')?.focus());

@@ -11,7 +11,8 @@
 	const liked = $derived(reader.likes.has(post.id));
 	const reposted = $derived(reader.reposts.has(post.id));
 	const bookmarked = $derived(reader.bookmarks.has(post.id));
-	const showReplies = $derived(reader.replies.has(post.id));
+	const expanded = $derived(reader.expanded.has(post.id));
+	const mine = $derived(reader.mine.get(post.id) ?? []);
 	const notes = $derived(
 		post.notes
 			.map((key) => book.notes.get(key) ?? book.posts[book.anchors.get(key) ?? -1]?.runs)
@@ -19,8 +20,29 @@
 	);
 	const chapter = $derived(book.chapters[post.chapter]?.title ?? '');
 
-	function openReplies() {
-		if (notes.length) reader.toggle(reader.replies, post.id);
+	const replyCount = $derived(notes.length + mine.length);
+
+	let draft = $state('');
+
+	function toggleReplies() {
+		reader.toggle(reader.expanded, post.id);
+	}
+
+	function send(event: SubmitEvent) {
+		event.preventDefault();
+		const text = draft.trim();
+		if (!text) return;
+		reader.reply(post.id, text);
+		draft = '';
+	}
+
+	/** Twitter-style relative time: 45s, 12m, 3h, then a short date. */
+	function ago(time: number) {
+		const seconds = Math.max(1, Math.round((Date.now() - time) / 1000));
+		if (seconds < 60) return `${seconds}s`;
+		if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
+		if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`;
+		return new Date(time).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 	}
 
 	let menu = $state(false);
@@ -50,7 +72,7 @@
 		class:flash={reader.flash === post.id}
 		class:clickable={!!onopen}
 		data-i={post.id}
-		onclick={(e) => onopen && !(e.target as Element).closest('button, a') && onopen()}
+		onclick={(e) => onopen && !(e.target as Element).closest('button, a, form') && onopen()}
 	>
 		<div class="gutter">{@render avatar(40)}</div>
 		<div class="body">
@@ -64,7 +86,7 @@
 
 			{#if post.runs.length}
 				<div class="text" class:quote={post.quote}>
-					{#if post.bullet}<span class="bullet">{post.bullet}</span>{/if}<Rich runs={post.runs} onnote={openReplies} />{#if post.parts > 1}<span class="count">{post.part + 1}/{post.parts}</span>{/if}
+					{#if post.bullet}<span class="bullet">{post.bullet}</span>{/if}<Rich runs={post.runs} onnote={() => reader.expanded.add(post.id)} />{#if post.parts > 1}<span class="count">{post.part + 1}/{post.parts}</span>{/if}
 				</div>
 			{/if}
 
@@ -95,8 +117,8 @@
 			{/each}
 
 			<div class="actions">
-				<button class="action reply" class:has-notes={notes.length > 0} title={notes.length ? 'Show footnotes' : 'Reply'} onclick={openReplies}>
-					<span class="halo"><Icon name="reply" size={18} /></span>{#if notes.length}{notes.length}{:else if settings.metrics}{compact(stats.replies)}{/if}
+				<button class="action reply" class:has-notes={replyCount > 0} title={notes.length ? 'Footnotes and replies' : 'Reply'} onclick={toggleReplies}>
+					<span class="halo"><Icon name="reply" size={18} /></span>{#if replyCount}{replyCount}{:else if settings.metrics}{compact(stats.replies)}{/if}
 				</button>
 				<button class="action repost" class:on={reposted} title="Repost" onclick={() => reader.toggle(reader.reposts, post.id)}>
 					<span class="halo"><Icon name="repost" size={18} /></span>{#if settings.metrics}{compact(stats.reposts + (reposted ? 1 : 0))}{/if}
@@ -126,7 +148,7 @@
 				</span>
 			</div>
 
-			{#if showReplies}
+			{#if expanded}
 				{#each notes as runs, n (n)}
 					<div class="reply-post">
 						<div class="gutter">{@render avatar(32)}</div>
@@ -141,6 +163,37 @@
 						</div>
 					</div>
 				{/each}
+				{#each mine as reply (reply.time)}
+					<div class="reply-post">
+						<div class="gutter"><div class="avatar you">You</div></div>
+						<div class="body">
+							<div class="meta">
+								<span class="name">You</span>
+								<span class="dot">·</span>
+								<span class="time">{ago(reply.time)}</span>
+								<button class="delete" title="Delete reply" onclick={() => reader.deleteReply(post.id, reply.time)}>
+									<Icon name="close" size={16} />
+								</button>
+							</div>
+							<div class="replying">Replying to <span>@{book.handle}</span></div>
+							<div class="text">{reply.text}</div>
+						</div>
+					</div>
+				{/each}
+				<form class="compose" onsubmit={send}>
+					<div class="avatar you">You</div>
+					<textarea
+						bind:value={draft}
+						placeholder="Post your reply"
+						rows="1"
+						maxlength="2000"
+						aria-label="Your reply"
+						onkeydown={(e) => {
+							if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) e.currentTarget.form?.requestSubmit();
+						}}
+					></textarea>
+					<button type="submit" disabled={!draft.trim()}>Reply</button>
+				</form>
 			{/if}
 		</div>
 	</article>
@@ -435,6 +488,75 @@
 	}
 	.replying span {
 		color: var(--accent);
+	}
+	.you {
+		display: grid;
+		place-items: center;
+		flex: none;
+		width: 32px;
+		height: 32px;
+		background: var(--accent-soft);
+		color: var(--accent);
+		font-size: 11px;
+		font-weight: 800;
+	}
+	.delete {
+		display: grid;
+		place-items: center;
+		width: 28px;
+		height: 28px;
+		margin-left: auto;
+		border: 0;
+		border-radius: 50%;
+		background: none;
+		color: var(--muted);
+		cursor: pointer;
+	}
+	.delete:hover {
+		color: var(--pink);
+		background: rgb(249 24 128 / 0.1);
+	}
+	.compose {
+		display: flex;
+		align-items: flex-start;
+		gap: 8px;
+		margin-top: 8px;
+		padding-top: 12px;
+		border-top: 1px solid var(--border);
+	}
+	.compose textarea {
+		flex: 1;
+		min-width: 0;
+		min-height: 32px;
+		padding: 5px 0;
+		border: 0;
+		outline: 0;
+		background: none;
+		color: var(--fg);
+		font-family: var(--reading-font);
+		font-size: var(--post-size);
+		line-height: 1.34;
+		resize: none;
+		field-sizing: content;
+	}
+	.compose textarea::placeholder {
+		color: var(--muted);
+	}
+	.compose button {
+		flex: none;
+		height: 32px;
+		padding: 0 16px;
+		border: 0;
+		border-radius: 999px;
+		background: var(--accent);
+		color: var(--on-accent);
+		font: inherit;
+		font-weight: 700;
+		cursor: pointer;
+	}
+	.compose button:disabled {
+		opacity: 0.5;
+		cursor: default;
 	}
 	.share-wrap {
 		position: relative;

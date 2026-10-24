@@ -73,6 +73,8 @@ Bold, italic, and monospace come from the HTML tags and from the book's CSS clas
 
 The like, repost, reply, and view counts are made up. They come from a hash of each post, so they stay the same between visits. Your likes, reposts, and bookmarks are real and saved per book.
 
+You can reply to any post. Your replies sit under the post next to its footnotes, count toward its reply number, and are saved with your bookmarks. Press `r` to reply to the post you're on, and `Cmd`+`Enter` or `Ctrl`+`Enter` to send.
+
 The share button copies a post's text with a credit line, or draws the post as an image in your current theme. On a phone the image goes to the share sheet; on a computer it downloads.
 
 ## Settings
@@ -118,6 +120,7 @@ A service worker caches the app, so it opens and reads saved books with no conne
 | `k` | Previous post |
 | `l` | Like |
 | `t` | Repost |
+| `r` | Reply |
 | `b` | Bookmark |
 | `/` | Search the book |
 | `Esc` | Close the drawer |

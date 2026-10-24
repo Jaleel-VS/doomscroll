@@ -1,5 +1,5 @@
 import { tick } from 'svelte';
-import { SvelteSet } from 'svelte/reactivity';
+import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import { parseEpub } from './epub/parse';
 import type { Book, Post } from './epub/types';
 import { locate, resolve } from './locator';
@@ -43,7 +43,10 @@ class Reader {
 	likes = new SvelteSet<number>();
 	reposts = new SvelteSet<number>();
 	bookmarks = new SvelteSet<number>();
-	replies = new SvelteSet<number>();
+	/** Posts whose replies (footnotes and yours) are showing. */
+	expanded = new SvelteSet<number>();
+	/** Replies you wrote, by post id, oldest first. */
+	mine = new SvelteMap<number, { text: string; time: number }[]>();
 
 	chapter = $derived(this.book?.posts[this.position]?.chapter ?? 0);
 	progress = $derived(this.book && this.book.posts.length > 1 ? this.position / (this.book.posts.length - 1) : 0);
@@ -75,7 +78,12 @@ class Reader {
 			this.likes = new SvelteSet(state.likes.map(toId));
 			this.reposts = new SvelteSet(state.reposts.map(toId));
 			this.bookmarks = new SvelteSet(state.bookmarks.map(toId));
-			this.replies = new SvelteSet();
+			this.expanded = new SvelteSet();
+			this.mine = new SvelteMap();
+			for (const { mark, text, time } of state.replies) {
+				const id = toId(mark);
+				this.mine.set(id, [...(this.mine.get(id) ?? []), { text, time }]);
+			}
 			if (!stay) {
 				this.tab = 'home';
 				this.query = '';
@@ -221,8 +229,21 @@ class Reader {
 			position: locate(book, this.position),
 			likes: marks(this.likes),
 			reposts: marks(this.reposts),
-			bookmarks: marks(this.bookmarks)
+			bookmarks: marks(this.bookmarks),
+			replies: [...this.mine].flatMap(([id, list]) => list.map((r) => ({ mark: locate(book, id), ...r })))
 		});
+	}
+
+	reply(id: number, text: string) {
+		this.mine.set(id, [...(this.mine.get(id) ?? []), { text, time: Date.now() }]);
+		this.persist();
+	}
+
+	deleteReply(id: number, time: number) {
+		const rest = (this.mine.get(id) ?? []).filter((r) => r.time !== time);
+		if (rest.length) this.mine.set(id, rest);
+		else this.mine.delete(id);
+		this.persist();
 	}
 }
 

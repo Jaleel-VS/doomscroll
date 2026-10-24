@@ -14,7 +14,17 @@ export type SavedBook = {
 /** A saved post. Plain numbers are post ids written before locators existed; they resolve as-is once, then get rewritten. */
 export type Mark = Locator | number;
 
-export type ReadingState = { progress: number; position: Mark; likes: Mark[]; reposts: Mark[]; bookmarks: Mark[] };
+/** Something you wrote under a post. `time` is when, in milliseconds since the epoch. */
+export type SavedReply = { mark: Mark; text: string; time: number };
+
+export type ReadingState = {
+	progress: number;
+	position: Mark;
+	likes: Mark[];
+	reposts: Mark[];
+	bookmarks: Mark[];
+	replies: SavedReply[];
+};
 
 const DB = 'doomscroll';
 const STORE = 'books';
@@ -43,7 +53,7 @@ export const listBooks = async () =>
 	(await transact<SavedBook[]>('readonly', (s) => s.getAll())).sort((a, b) => b.opened - a.opened);
 
 export function loadState(key: string): ReadingState {
-	const empty: ReadingState = { progress: 0, position: 0, likes: [], reposts: [], bookmarks: [] };
+	const empty: ReadingState = { progress: 0, position: 0, likes: [], reposts: [], bookmarks: [], replies: [] };
 	try {
 		const saved = JSON.parse(localStorage.getItem(`state:${key}`) ?? '{}');
 		// Older saves stored `position` as an id plus the post count instead of a progress fraction.
