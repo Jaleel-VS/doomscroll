@@ -1,0 +1,206 @@
+import { tick } from 'svelte';
+import { SvelteSet } from 'svelte/reactivity';
+import { parseEpub } from './epub/parse';
+import type { Book, Post } from './epub/types';
+import { deleteBook, forgetState, listBooks, loadBook, loadState, saveBook, saveState, type SavedBook } from './storage';
+
+const PAGE = 40;
+
+class Reader {
+	book = $state.raw<Book | null>(null);
+	library = $state.raw<SavedBook[]>([]);
+	loading = $state(false);
+	error = $state('');
+
+	/** Index of the post at the top of the viewport. */
+	position = $state(0);
+	/** Rendered window of the feed: posts[start, end). */
+	start = $state(0);
+	end = $state(0);
+	/** True while `jump` owns the scroll position; the feed must not re-anchor meanwhile. */
+	jumping = $state(false);
+
+	tab = $state<'home' | 'bookmarks'>('home');
+	drawer = $state(false);
+	toast = $state('');
+	flash = $state(-1);
+
+	likes = new SvelteSet<number>();
+	reposts = new SvelteSet<number>();
+	bookmarks = new SvelteSet<number>();
+	replies = new SvelteSet<number>();
+
+	chapter = $derived(this.book?.posts[this.position]?.chapter ?? 0);
+	progress = $derived(this.book && this.book.posts.length > 1 ? this.position / (this.book.posts.length - 1) : 0);
+
+	private saveTimer = 0;
+	private toastTimer = 0;
+	private flashTimer = 0;
+
+	async refreshLibrary() {
+		try {
+			this.library = await listBooks();
+		} catch {
+			this.library = [];
+		}
+	}
+
+	async open(file: Blob) {
+		this.loading = true;
+		this.error = '';
+		try {
+			const book = await parseEpub(file);
+			if (!book.posts.length) throw new Error('No readable text found in this EPUB.');
+			this.close();
+			const state = loadState(book.key);
+			this.likes = new SvelteSet(state.likes);
+			this.reposts = new SvelteSet(state.reposts);
+			this.bookmarks = new SvelteSet(state.bookmarks);
+			this.replies = new SvelteSet();
+			this.tab = 'home';
+			this.start = this.end = 0;
+			this.book = book;
+			document.title = `${book.title} / Twitter`;
+			saveBook({ key: book.key, title: book.title, author: names(book.authors), file, cover: book.coverBlob, opened: Date.now() }).catch(
+				() => this.notify('Couldn’t save this book for next time')
+			);
+			await this.jump(Math.min(state.position, book.posts.length - 1), { flash: false });
+		} catch (e) {
+			this.error = e instanceof Error ? e.message : String(e);
+		} finally {
+			this.loading = false;
+		}
+	}
+
+	async openSaved(key: string) {
+		const saved = await loadBook(key);
+		if (saved) await this.open(saved.file);
+	}
+
+	async forget(key: string) {
+		await deleteBook(key);
+		forgetState(key);
+		await this.refreshLibrary();
+	}
+
+	close() {
+		for (const url of this.book?.urls ?? []) URL.revokeObjectURL(url);
+		this.book = null;
+		this.drawer = false;
+		document.title = 'Doomscroll';
+	}
+
+	async home() {
+		this.close();
+		await this.refreshLibrary();
+	}
+
+	/** Render a window around post `id` and scroll it under the header. */
+	async jump(id: number, { smooth = false, flash = true } = {}) {
+		const book = this.book;
+		if (!book || id < 0 || id >= book.posts.length) return;
+		this.jumping = true;
+		this.tab = 'home';
+		this.drawer = false;
+		if (id < this.start || id >= this.end) {
+			this.start = Math.max(0, id - 10);
+			this.end = Math.min(book.posts.length, id + PAGE);
+		}
+		await tick();
+		const behavior = smooth ? 'smooth' : 'instant';
+		if (id === 0) window.scrollTo({ top: 0, behavior });
+		else document.querySelector(`[data-i="${id}"]`)?.scrollIntoView({ block: 'start', behavior });
+		this.position = id;
+		this.jumping = false;
+		this.persist();
+		if (flash) {
+			this.flash = id;
+			clearTimeout(this.flashTimer);
+			this.flashTimer = window.setTimeout(() => (this.flash = -1), 1600);
+		}
+	}
+
+	setPosition(id: number) {
+		if (id === this.position) return;
+		this.position = id;
+		this.persist();
+	}
+
+	toggle(set: SvelteSet<number>, id: number) {
+		if (set.has(id)) set.delete(id);
+		else set.add(id);
+		this.persist();
+	}
+
+	notify(message: string) {
+		this.toast = message;
+		clearTimeout(this.toastTimer);
+		this.toastTimer = window.setTimeout(() => (this.toast = ''), 2600);
+	}
+
+	async share(post: Post) {
+		const book = this.book!;
+		const text = post.kind === 'code' ? post.code! : post.plain;
+		await navigator.clipboard.writeText(`“${text}”\n— ${names(book.authors) || book.author}, ${book.title}`);
+		this.notify('Copied to clipboard');
+	}
+
+	/** Find the next post after `from` containing `query`, wrapping to the start. */
+	search(query: string, from = this.position) {
+		const normalize = (s: string) => s.replace(/\s+/g, ' ').toLowerCase();
+		const needle = normalize(query.trim());
+		if (!needle || !this.book) return null;
+		const hits = this.book.posts.filter((p) => normalize(p.plain).includes(needle)).map((p) => p.id);
+		if (!hits.length) return null;
+		const next = hits.findIndex((id) => id > from);
+		const index = next === -1 ? 0 : next;
+		return { id: hits[index], index, total: hits.length };
+	}
+
+	private persist() {
+		const book = this.book;
+		if (!book) return;
+		clearTimeout(this.saveTimer);
+		this.saveTimer = window.setTimeout(
+			() =>
+				saveState(book.key, {
+					position: this.position,
+					total: book.posts.length,
+					likes: [...this.likes],
+					reposts: [...this.reposts],
+					bookmarks: [...this.bookmarks]
+				}),
+			250
+		);
+	}
+}
+
+export const reader = new Reader();
+
+/** Deterministic, plausible engagement numbers for a post. */
+export function engagement(post: Post) {
+	let h = 2166136261;
+	for (let i = 0; i < Math.min(post.plain.length, 64); i++) h = Math.imul(h ^ post.plain.charCodeAt(i), 16777619);
+	h = Math.imul(h ^ post.id, 16777619) >>> 0;
+	const views = 800 + (h % 48000) * (1 + (post.plain.length % 7));
+	const likes = Math.round(views * (0.01 + ((h >>> 8) % 40) / 1000));
+	return {
+		views,
+		likes,
+		reposts: Math.round(likes / (4 + ((h >>> 4) % 8))),
+		replies: Math.round(likes / (12 + ((h >>> 12) % 20)))
+	};
+}
+
+export function compact(n: number) {
+	if (n < 1000) return String(n);
+	if (n < 1e6) return `${(n / 1000).toFixed(n < 10000 ? 1 : 0).replace(/\.0$/, '')}K`;
+	return `${(n / 1e6).toFixed(1).replace(/\.0$/, '')}M`;
+}
+
+const list = new Intl.ListFormat('en', { style: 'long', type: 'conjunction' });
+
+/** "A", "A and B", "A, B, and C"; long lists collapse to "A, B, and 10 others". */
+export function names(people: string[]) {
+	return list.format(people.length > 3 ? [...people.slice(0, 2), `${people.length - 2} others`] : people);
+}

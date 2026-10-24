@@ -1,0 +1,59 @@
+:root {
+	color-scheme: dark;
+	--bg: #000;
+	--fg: #e7e9ea;
+	--strong: #e7e9ea;
+	--muted: #71767b;
+	--border: #2f3336;
+	--thread: #333639;
+	--card: #16181c;
+	--search: #202327;
+	--hover: rgb(255 255 255 / 0.03);
+	--hover-strong: rgb(231 233 234 / 0.1);
+	--accent: #1d9bf0;
+	--accent-hover: #1a8cd8;
+	--pink: #f91880;
+	--green: #00ba7c;
+	--error: #f4212e;
+	--header-h: 54px;
+}
+
+@media (max-width: 640px) {
+	:root {
+		--header-h: 107px;
+	}
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html {
+	overflow-anchor: none;
+	-webkit-text-size-adjust: 100%;
+}
+
+body {
+	margin: 0;
+	background: var(--bg);
+	color: var(--fg);
+	font: 15px/20px TwitterChirp, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+	-webkit-font-smoothing: antialiased;
+}
+
+button {
+	-webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
+.muted {
+	color: var(--muted);
+}
+
+::selection {
+	background: rgb(29 155 240 / 0.4);
+}
