@@ -11,7 +11,12 @@ export function splitRuns(runs: Run[], lang = 'en', limit = POST_LIMIT): Run[][]
 
 	let segmenter = segmenters.get(lang);
 	if (!segmenter) {
-		segmenter = new Intl.Segmenter(lang, { granularity: 'sentence' });
+		// Books often put a language name ("Afrikaans") in dc:language instead of a tag ("af"); fall back to the default.
+		try {
+			segmenter = new Intl.Segmenter(lang, { granularity: 'sentence' });
+		} catch {
+			segmenter = new Intl.Segmenter(undefined, { granularity: 'sentence' });
+		}
 		segmenters.set(lang, segmenter);
 	}
 	// Footnote markers glued to punctuation ("guesses.¹ Nor") hide sentence ends; blank them for segmentation.

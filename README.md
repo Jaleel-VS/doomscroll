@@ -72,7 +72,7 @@ The screenshots use public-domain books from [Project Gutenberg](https://www.gut
 | `pre`, monospace CSS, or a shaded box with one `div` per line | A code card. |
 | Footnote reference (`noteref` type or role, or a superscript link) | The reply count. Click it to read the note as a reply. |
 | The book's own contents page | Dropped, because the sidebar already lists the chapters. |
-| Where the book starts: EPUB 3 `bodymatter` landmark, EPUB 2 guide `text` or `start`, `epub:type` on the chapters, or the table of contents | The **Start reading** button. Doomscroll tries these in that order and skips any that point into front matter. |
+| Where the book starts: EPUB 3 `bodymatter` landmark, EPUB 2 guide `text` or `start`, `epub:type` on the chapters, or the table of contents | The **Start reading** button. Doomscroll tries these in that order and skips any that point into front matter. It reads table-of-contents titles in English, Spanish, Afrikaans, Dutch, French, and German. |
 | `dc:creator` and `dc:contributor` | The first author writes every post. The profile lists every author, plus translators and illustrators. |
 
 Bold, italic, and monospace come from the HTML tags and from the book's CSS classes. That matters for books converted with Calibre, which often style everything through classes.

@@ -23,6 +23,13 @@ describe('splitRuns', () => {
 		expect(chunks.join(' ')).toBe(text);
 	});
 
+	it('still splits when the book gives a language name instead of a tag', () => {
+		const text = 'Dit is ’n sin wat lank genoeg is om te tel. '.repeat(10).trim();
+		const chunks = textOf(splitRuns([{ text, marks: 0 }], 'Afrikaans', 280));
+		expect(chunks.length).toBe(2);
+		expect(chunks.join(' ')).toBe(text);
+	});
+
 	it('falls back to word boundaries for a single overlong sentence', () => {
 		const text = Array.from({ length: 120 }, (_, i) => `word${i}`).join(' ');
 		const chunks = textOf(splitRuns([{ text, marks: 0 }], 'en', 280));

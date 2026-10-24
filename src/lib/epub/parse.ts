@@ -530,34 +530,68 @@ function similar(a: string, b: string) {
 	return !!x && !!y && x.length <= 120 && (x.includes(y) || y.includes(x));
 }
 
-/** Section titles that come before the text proper. "Introduction" and "Prologue" are deliberately not here. */
-const FRONT_MATTER =
-	/^(the )?(cover|title ?page|half ?title|copyright|imprint|dedication|epigraph|(table of )?contents|acknowledge?ments?|about (the|this)|also by|praise|front ?matter|foreword|preface|translator|editor|list of illustrations|frontispiece|colophon|uncopyright)/i;
+/**
+ * Section titles that come before the text proper, in English, Spanish, Afrikaans and Dutch, French, and German.
+ * "Introduction" and "Prologue" are deliberately not here: they're part of the book.
+ */
+const FRONT_MATTER = new RegExp(
+	'^(the |a )?(' +
+		[
+			'cover|title ?page|half ?title|copyright|imprint|dedication|epigraph|(brief )?contents|table of contents',
+			'acknowledge?ments?|about (the|this)|also by|praise|front ?matter|foreword|preface|translator|editor',
+			'list of (illustrations|figures|tables)|frontispiece|colophon|uncopyright|chronology|further reading',
+			"note on|author'?s note|caveat|abbreviations|how to use this book|maps?$|startup",
+			'cubierta|portada|sinopsis|cr[ée]ditos|[íi]ndice|dedicatoria|agradecimientos|cita$|nota del autor|sobre el autor',
+			'voorblad|titelblad|kopiereg|inhoud|opdrag|erkennings?|aanhalings?|voorwoord|woord vooraf|voor$',
+			'couverture|page de titre|sommaire|table des mati[èe]res|d[ée]dicace|remerciements|pr[ée]face',
+			'titelseite|inhalt|impressum|widmung|danksagung|vorwort'
+		].join('|') +
+		')',
+	'i'
+);
+
+const CONTENTS = /^((table of |brief )?contents( in detail)?|[íi]ndice|inhoud|sommaire|table des mati[èe]res|inhalt(sverzeichnis)?)$/i;
+
+/** "Chapter 1", "Part I", "Capítulo uno", "Libro primero", "Hoofstuk 1", "1. Loomings", "I", "Prologue". */
+const CHAPTER_ONE = new RegExp(
+	[
+		'^(chapter|part|book|cap[íi]tulo|parte|libro|chapitre|partie|livre|kapitel|teil|buch|hoofstuk|deel|boek)\\s+' +
+			'(1|one|i|uno|una|primer[oa]?|un|une|premi[eè]re?|eins|erste[rs]?|een|eerste)\\b',
+		'^(first|primer[oa]?|premi[eè]re?|erste[rs]?|eerste)\\s+(part|book|parte|libro|partie|livre|teil|buch|deel|boek)\\b',
+		'^(1|i|one)\\s*[.:)\\-—]',
+		'^(1|i)$',
+		'^(prologue|pr[óo]logo|prolog|proloog)\\b'
+	].join('|'),
+	'i'
+);
 
 /**
- * Guesses from the table of contents, for books that don't mark where they start: the first real entry after a
- * "Contents" entry (Project Gutenberg's layout), then the first entry that looks like chapter one.
+ * Guesses from the table of contents, for books that don't mark where they start, most likely first: the first real
+ * entry after a "Contents" entry (Project Gutenberg's layout), the first entry that looks like chapter one, and the
+ * first entry that is neither front matter nor the book's own title. In that last guess, an entry repeating the book's
+ * title after the first real entry is a half-title before the main text (a classic's own "Introduction" comes first),
+ * so it wins.
  */
-function tocStarts(toc: TocEntry[], title: string) {
-	const contents = toc.findIndex((e) => /^(table of )?contents$/i.test(e.title));
-	const afterContents =
-		contents === -1 ? undefined : toc.slice(contents + 1).find((e) => !FRONT_MATTER.test(e.title) && !similar(e.title, title));
-	const chapterOne = toc.find((e) =>
-		/^(chapter|part|book)\s+(1|one|i)\b|^(1|i|one)\s*[.:)\-—]|^(1|i)$|^prologue\b/i.test(e.title)
-	);
-	return [afterContents?.href, chapterOne?.href];
+export function tocStarts(toc: TocEntry[], title: string) {
+	const real = (e: TocEntry) => !FRONT_MATTER.test(e.title) && !similar(e.title, title);
+	const contents = toc.findIndex((e) => CONTENTS.test(e.title));
+	const afterContents = contents === -1 ? undefined : toc.slice(contents + 1).find(real);
+	// "1 Introductory Concepts": a bare number then a capitalised word. Case-sensitive, so "1 in 3" doesn't count.
+	const chapterOne = toc.find((e) => CHAPTER_ONE.test(e.title) || /^1\s+\p{Lu}/u.test(e.title));
+	const firstReal = toc.findIndex(real);
+	const halfTitle = firstReal === -1 ? undefined : toc.slice(firstReal + 1).find((e) => similar(e.title, title));
+	return [afterContents?.href, chapterOne?.href, (halfTitle ?? toc[firstReal])?.href];
 }
 
 /**
  * The post where the body of the book starts, from the first candidate (most trusted first) that lands outside the
- * front matter. `undefined` when nothing usable is found; 0 when the book starts straight away.
+ * front matter. 0 means the book starts straight away; `undefined` means nothing usable was found.
  */
 function findStart(candidates: (string | undefined)[], anchors: Map<string, number>, posts: Post[], chapters: Chapter[]) {
 	for (const href of candidates) {
 		if (!href) continue;
 		const at = anchors.get(href) ?? anchors.get(href.split('#')[0]);
 		if (at === undefined || at >= posts.length) continue;
-		if (at === 0) return 0;
 		if (!FRONT_MATTER.test(chapters[posts[at].chapter]?.title ?? '')) return at;
 	}
 	return undefined;
