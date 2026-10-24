@@ -1,46 +1,103 @@
 # Doomscroll
 
-Read any EPUB as if you were doomscrolling Twitter in Lights Out mode.
+Doomscroll turns an EPUB into a Twitter timeline, so you can read a book the way you'd doomscroll in Lights Out mode. Each paragraph is a post from the author. Long paragraphs become threads, chapters trend in the sidebar, and footnotes show up as replies.
 
-Every paragraph becomes a post from the author, long paragraphs turn into threads, chapters trend in the sidebar, footnotes show up as replies, and tables, figures and code listings render as cards. Books are parsed in the browser and stored locally (IndexedDB); nothing is uploaded.
+Everything runs in your browser. The book is parsed on your device and saved in IndexedDB, and nothing is uploaded.
 
-## Run
+![A thread from Alice's Adventures in Wonderland, with chapters trending in the sidebar](docs/screenshots/thread.png)
+
+## Run it
+
+You need Node and pnpm.
 
 ```sh
 pnpm install
-pnpm dev          # http://localhost:5173
-pnpm build        # static site in build/
-pnpm test         # unit tests
-pnpm check        # svelte-check
+pnpm dev      # http://localhost:5173
 ```
 
-Open or drop an `.epub` anywhere on the page. The most recently read book reopens automatically, at the post you were on.
+Open an `.epub` or drop one anywhere on the page. The last book you read reopens at the post you were on.
+
+Other scripts:
+
+```sh
+pnpm build    # static site in build/
+pnpm test     # unit tests
+pnpm check    # svelte-check
+```
+
+`pnpm build` writes a static site, so you can host `build/` anywhere that serves files.
+
+## What it looks like
+
+The top of the feed is the book's profile: the cover is the avatar, and the header lists the authors, the publication year, and the chapter and post counts.
+
+![The profile header for Alice's Adventures in Wonderland](docs/screenshots/profile.png)
+
+Illustrations become media posts, and chapter headings become section breaks in the feed.
+
+![An illustration post followed by the next chapter heading](docs/screenshots/illustration.png)
+
+On a phone you get the mobile layout: a bottom tab bar, and a drawer for search and chapters that opens when you tap your avatar.
+
+| Feed | Chapters |
+| --- | --- |
+| ![Mobile feed](docs/screenshots/mobile-feed.png) | ![Mobile chapter drawer](docs/screenshots/mobile-chapters.png) |
+
+The landing page keeps a list of the books you've opened, with how far you got in each.
+
+![The landing page with two books in progress](docs/screenshots/landing.png)
+
+The screenshots use public-domain books from [Project Gutenberg](https://www.gutenberg.org/).
 
 ## How a book becomes a feed
 
-| EPUB content | In the feed |
+| In the EPUB | In the feed |
 | --- | --- |
-| Paragraph, list item, loose inline text | A post (lists keep `•` / `1.` markers) |
-| Paragraph over 280 characters | A thread, split at sentence ends into evenly sized posts |
-| `h1`–`h6`, or a large-font CSS class, or a block matching the TOC title | Section header |
-| TOC entries (EPUB 3 nav or NCX) | “What’s happening” trends with post counts and reading progress |
-| `blockquote` | Quote-card post |
-| `figure` / images | Media post; the caption is the post text |
-| `table` | Table card (keeps `rowspan`/`colspan`; single-column layout tables are unwrapped) |
-| `pre`, monospace CSS, or shaded one-line-per-`div` listings | Code card |
-| Footnote references (`epub:type`/`role` noteref, or superscript links) | Reply count; clicking shows the note as replies |
-| In-book table of contents pages | Dropped (the sidebar covers them) |
-| `dc:creator` entries | First author posts everything; the profile lists all authors and translators (roles honoured, illustrators/editors skipped when real authors exist) |
+| Paragraph, list item, or loose text | A post. Lists keep their `•` or `1.` markers. |
+| Paragraph over 280 characters | A thread, split at sentence ends into posts of similar length. |
+| `h1` to `h6`, a large-font CSS class, or a line that matches the table of contents | A section header. |
+| Table of contents (EPUB 3 nav or NCX) | The "What's happening" trends, with post counts and your progress. |
+| `blockquote` | A quote card. |
+| `figure` or image | A media post. The caption is the post text. |
+| `table` | A table card that keeps `rowspan` and `colspan`. Single-column layout tables are unwrapped. |
+| `pre`, monospace CSS, or a shaded box with one `div` per line | A code card. |
+| Footnote reference (`noteref` type or role, or a superscript link) | The reply count. Click it to read the note as a reply. |
+| The book's own contents page | Dropped, because the sidebar already lists the chapters. |
+| `dc:creator` | The first author writes every post. The profile lists every author and translator. |
 
-Bold/italic/monospace come from tags and from the book's own CSS classes, which matters for Calibre-style conversions that style everything with classes.
+Bold, italic, and monospace come from the HTML tags and from the book's CSS classes. That matters for books converted with Calibre, which often style everything through classes.
 
-## Keyboard
+The like, repost, reply, and view counts are made up. They come from a hash of each post, so they stay the same between visits. Your likes, reposts, and bookmarks are real and saved per book.
 
-`j` / `k` next / previous post · `l` like · `t` repost · `b` bookmark · `/` search · `Esc` close
+## Keyboard shortcuts
 
-## Layout
+| Key | Action |
+| --- | --- |
+| `j` | Next post |
+| `k` | Previous post |
+| `l` | Like |
+| `t` | Repost |
+| `b` | Bookmark |
+| `/` | Search the book |
+| `Esc` | Close the drawer |
 
-- `src/lib/epub/` — ZIP reader (native `DecompressionStream`), EPUB parser, thread splitter
-- `src/lib/reader.svelte.ts` — reading state: windowed feed, jumps, likes/bookmarks, search
-- `src/lib/storage.ts` — IndexedDB library and per-book `localStorage` state
-- `src/lib/components/` — X-style UI
+## Limits
+
+- Doomscroll needs a recent browser: Chrome 119, Safari 17.4, Firefox 125, or later. It relies on the built-in `DecompressionStream`, `Intl.Segmenter`, and `Promise.withResolvers`.
+- There's no DRM support.
+- ZIP64 archives don't open. EPUBs are rarely large enough to use ZIP64.
+- Math shows as plain italic text, not rendered equations.
+- Book metadata is shown as the book provides it. A messy title in the EPUB is a messy title in the feed.
+
+## Code layout
+
+| Path | What it does |
+| --- | --- |
+| `src/lib/epub/zip.ts` | Reads the EPUB's ZIP archive with the browser's `DecompressionStream`. |
+| `src/lib/epub/parse.ts` | Turns the package, table of contents, and chapters into posts. |
+| `src/lib/epub/split.ts` | Splits long paragraphs into threads. |
+| `src/lib/reader.svelte.ts` | Holds the reading state: the rendered window of posts, jumps, likes, bookmarks, and search. |
+| `src/lib/storage.ts` | Saves books to IndexedDB and reading progress to `localStorage`. |
+| `src/lib/components/` | The Twitter-style UI. |
+
+Doomscroll isn't affiliated with Twitter or X. The bird logo belongs to X Corp.

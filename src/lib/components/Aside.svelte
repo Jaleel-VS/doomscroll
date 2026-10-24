@@ -63,7 +63,7 @@
 				>
 					<span class="small">{i === reader.chapter ? 'Trending now · You’re here' : `${i + 1} of ${book.chapters.length} · Trending`}</span>
 					<span class="title">{chapter.title}</span>
-					<span class="small">{compact(chapter.count)} posts</span>
+					<span class="small">{compact(chapter.count)} {chapter.count === 1 ? 'post' : 'posts'}</span>
 				</button>
 			{/each}
 		</div>
