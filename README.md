@@ -68,6 +68,7 @@ The screenshots use public-domain books from [Project Gutenberg](https://www.gut
 | `blockquote` | A quote card. |
 | `figure` or image | A media post. The caption is the post text. Click the image to open it full screen. |
 | `table` | A table card that keeps `rowspan` and `colspan`. Single-column layout tables are unwrapped. |
+| MathML (`math`) | Rendered equations. Display equations get their own line. Only MathML elements and layout attributes are kept. |
 | `pre`, monospace CSS, or a shaded box with one `div` per line | A code card. |
 | Footnote reference (`noteref` type or role, or a superscript link) | The reply count. Click it to read the note as a reply. |
 | The book's own contents page | Dropped, because the sidebar already lists the chapters. |
@@ -134,7 +135,7 @@ A service worker caches the app, so it opens and reads saved books with no conne
 - Doomscroll needs a recent browser: Chrome 119, Safari 17.4, Firefox 125, or later. It relies on the built-in `DecompressionStream`, `Intl.Segmenter`, and `Promise.withResolvers`.
 - There's no DRM support.
 - ZIP64 archives don't open. EPUBs are rarely large enough to use ZIP64.
-- Math shows as plain italic text, not rendered equations.
+- Equations written as LaTeX source in the text, rather than MathML, show as that source.
 - Book metadata is shown as the book provides it. A messy title in the EPUB is a messy title in the feed.
 
 ## Code layout

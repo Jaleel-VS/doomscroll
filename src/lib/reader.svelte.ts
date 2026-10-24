@@ -56,6 +56,8 @@ class Reader {
 
 	private file: Blob | null = null;
 	private saveTimer = 0;
+	/** Counts `open` calls so a slow parse can't replace a book opened after it started. */
+	private opening = 0;
 	private toastTimer = 0;
 	private flashTimer = 0;
 
@@ -69,10 +71,15 @@ class Reader {
 
 	/** Parse and show a book. `stay` keeps the current tab and only records the restored place (used by Settings). */
 	async open(file: Blob, { stay = false } = {}) {
+		const ticket = ++this.opening;
 		this.loading = true;
 		this.error = '';
 		try {
 			const book = await parseEpub(file, { limit: POST_LENGTHS[settings.postLength] });
+			if (ticket !== this.opening) {
+				for (const url of book.urls) URL.revokeObjectURL(url);
+				return;
+			}
 			if (!book.posts.length) throw new Error('No readable text found in this EPUB.');
 			this.close();
 			const state = loadState(book.key);
@@ -103,9 +110,9 @@ class Reader {
 			if (stay) this.position = position;
 			else await this.jump(position, { flash: false });
 		} catch (e) {
-			this.error = e instanceof Error ? e.message : String(e);
+			if (ticket === this.opening) this.error = e instanceof Error ? e.message : String(e);
 		} finally {
-			this.loading = false;
+			if (ticket === this.opening) this.loading = false;
 		}
 	}
 

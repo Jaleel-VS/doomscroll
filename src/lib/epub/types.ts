@@ -6,8 +6,11 @@ export const BOLD = 1,
 	UNDERLINE = 32,
 	STRIKE = 64;
 
-/** A styled span of text. `href` is an internal anchor key (`path#id`) or an external URL. */
-export type Run = { text: string; marks: number; href?: string; note?: boolean };
+/**
+ * A styled span of text. `href` is an internal anchor key (`path#id`) or an external URL. A run with `math` is an
+ * equation: `math` holds sanitized MathML to render, and `text` its plain-text reading for search and length.
+ */
+export type Run = { text: string; marks: number; href?: string; note?: boolean; math?: string };
 
 export type Cell = { runs: Run[]; head: boolean; rowspan: number; colspan: number };
 

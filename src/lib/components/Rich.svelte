@@ -33,11 +33,22 @@
 
 {#snippet marked(text: string)}{#each pieces(text) as piece, p (p)}{#if piece.hit}<mark>{piece.text}</mark>{:else}{piece.text}{/if}{/each}{/snippet}
 
-{#each runs as run, i (i)}{#if run.note}<button class="note {classes(run.marks)}" onclick={onnote}>{run.text}</button>{:else if run.href && /^(https?|mailto):/i.test(run.href)}<a class={classes(run.marks)} href={run.href} target="_blank" rel="noopener noreferrer">{@render marked(run.text)}</a>{:else if run.href}<a class={classes(run.marks)} href="#{run.href}" onclick={(e) => follow(e, run.href!)}>{@render marked(run.text)}</a>{:else}<span class={classes(run.marks)}>{@render marked(run.text)}</span>{/if}{/each}
+<!-- Equations: `run.math` is MathML rebuilt from an allowlist in epub/mathml.ts, never the book's raw markup. -->
+{#each runs as run, i (i)}{#if run.math}<span class="math">{@html run.math}</span>{:else if run.note}<button class="note {classes(run.marks)}" onclick={onnote}>{run.text}</button>{:else if run.href && /^(https?|mailto):/i.test(run.href)}<a class={classes(run.marks)} href={run.href} target="_blank" rel="noopener noreferrer">{@render marked(run.text)}</a>{:else if run.href}<a class={classes(run.marks)} href="#{run.href}" onclick={(e) => follow(e, run.href!)}>{@render marked(run.text)}</a>{:else}<span class={classes(run.marks)}>{@render marked(run.text)}</span>{/if}{/each}
 
 <style>
 	.b {
 		font-weight: 700;
+	}
+	.math {
+		font-size: 1.1em;
+	}
+	/* Display equations get their own line and scroll sideways instead of overflowing the post. */
+	.math :global(math[display='block']) {
+		display: block math;
+		margin: 8px 0;
+		overflow-x: auto;
+		overflow-y: hidden;
 	}
 	.i {
 		font-style: italic;

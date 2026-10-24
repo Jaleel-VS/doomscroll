@@ -55,7 +55,10 @@ function sliceRuns(runs: Run[], start: number, end: number): Run[] {
 	for (const run of runs) {
 		const a = Math.max(start, offset);
 		const b = Math.min(end, offset + run.text.length);
-		if (a < b) out.push({ ...run, text: run.text.slice(a - offset, b - offset) });
+		// An equation can't be cut in half; it goes whole into the post where it starts.
+		if (run.math) {
+			if (offset >= start && offset < end) out.push(run);
+		} else if (a < b) out.push({ ...run, text: run.text.slice(a - offset, b - offset) });
 		offset += run.text.length;
 	}
 	return out;

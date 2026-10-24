@@ -1,4 +1,5 @@
 import { openZip } from './zip';
+import { serializeMath } from './mathml';
 import { POST_LIMIT, splitRuns, trimRuns } from './split';
 import {
 	BOLD,
@@ -413,8 +414,8 @@ class Builder {
 				return;
 			}
 			if (tag === 'math') {
-				const text = el.getAttribute('alttext') ?? el.textContent ?? '';
-				return void runs.push({ text: ` ${text.trim()} `, marks: marks | ITALIC, href, note });
+				const text = (el.getAttribute('alttext') || el.textContent || '').replace(/\s+/g, ' ').trim();
+				return void runs.push({ text: text || '∎', marks, href, note, math: serializeMath(el) });
 			}
 			if (tag === 'a' && el.getAttribute('href')) {
 				const raw = el.getAttribute('href')!;
@@ -461,10 +462,17 @@ function mergeRuns(runs: Run[]): Run[] {
 		let text = run.text;
 		if (prev && /[ \n]$/.test(prev.text) && text.startsWith(' ')) text = text.slice(1);
 		if (!text) continue;
-		if (prev && prev.marks === run.marks && prev.href === run.href && prev.note === run.note) prev.text += text;
+		const same = prev && !prev.math && !run.math && prev.marks === run.marks && prev.href === run.href && prev.note === run.note;
+		if (same) prev.text += text;
 		else out.push({ ...run, text });
 	}
-	return out;
+	// A display equation sits on its own line, so spaces beside it would show at the start or end of a line.
+	out.forEach((run, i) => {
+		if (!run.math || !/^<math[^>]*\sdisplay="block"/.test(run.math)) return;
+		if (out[i - 1]) out[i - 1].text = out[i - 1].text.trimEnd();
+		if (out[i + 1]) out[i + 1].text = out[i + 1].text.trimStart();
+	});
+	return out.filter((run) => run.text);
 }
 
 function buildChapters(toc: TocEntry[], anchors: Map<string, number>, posts: Post[]): Chapter[] {
