@@ -41,6 +41,10 @@ Illustrations become media posts, and chapter headings become section breaks in 
 
 ![An illustration post followed by the next chapter heading](docs/screenshots/illustration.png)
 
+Settings has a live preview of the post you're on, like Twitter's display settings.
+
+![The Settings page with font size, font, color, background, and post length](docs/screenshots/settings.png)
+
 On a phone you get the mobile layout: a bottom tab bar, and a drawer for search and chapters that opens when you tap your avatar.
 
 | Feed | Chapters |
@@ -99,7 +103,7 @@ Everything stays in the browser you read in.
 | What | Where |
 | --- | --- |
 | Book files and covers | IndexedDB, database `doomscroll` |
-| Reading position, likes, reposts, and bookmarks | `localStorage`, one `state:` entry per book |
+| Reading position, likes, reposts, bookmarks, and your replies | `localStorage`, one `state:` entry per book |
 | Settings | `localStorage`, key `settings` |
 
 Positions and bookmarks are saved by spine document and opening words, not by post number. They survive parser updates and post-length changes. Clearing site data, or reading on another device, starts from scratch. **Settings** > **Clear library** removes every book and its progress.
