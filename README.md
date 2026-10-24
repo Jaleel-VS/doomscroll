@@ -4,7 +4,7 @@ Doomscroll turns an EPUB into a Twitter timeline, so you can read a book the way
 
 Everything runs in your browser. The book is parsed on your device and saved in IndexedDB, and nothing is uploaded.
 
-Try it at [doomscroll-self.vercel.app](https://doomscroll-self.vercel.app). You bring the EPUB.
+Try it at [doomscroll.jaleel.me](https://doomscroll.jaleel.me). You bring the EPUB.
 
 ![A thread from Alice's Adventures in Wonderland, with chapters trending in the sidebar](docs/screenshots/thread.png)
 
