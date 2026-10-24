@@ -36,6 +36,8 @@ class Reader {
 	drawer = $state(false);
 	toast = $state('');
 	flash = $state(-1);
+	/** The last successful search, highlighted in posts until the search box is cleared. */
+	query = $state('');
 
 	likes = new SvelteSet<number>();
 	reposts = new SvelteSet<number>();
@@ -73,14 +75,18 @@ class Reader {
 			this.reposts = new SvelteSet(state.reposts.map(toId));
 			this.bookmarks = new SvelteSet(state.bookmarks.map(toId));
 			this.replies = new SvelteSet();
-			if (!stay) this.tab = 'home';
+			if (!stay) {
+				this.tab = 'home';
+				this.query = '';
+			}
 			this.start = this.end = 0;
 			this.file = file;
 			this.book = book;
 			document.title = `${book.title} / Twitter`;
-			saveBook({ key: book.key, title: book.title, author: names(book.authors), file, cover: book.coverBlob, opened: Date.now() }).catch(
-				() => this.notify('Couldn’t save this book for next time')
-			);
+			saveBook({ key: book.key, title: book.title, author: names(book.authors), file, cover: book.coverBlob, opened: Date.now() })
+				// Ask the browser to keep saved books instead of evicting them when disk space runs low.
+				.then(() => navigator.storage?.persist?.())
+				.catch(() => this.notify('Couldn’t save this book for next time'));
 			const position = toId(state.position);
 			if (stay) this.position = position;
 			else await this.jump(position, { flash: false });

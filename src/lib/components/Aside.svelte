@@ -5,7 +5,7 @@
 
 	let { book }: { book: Book } = $props();
 
-	let query = $state('');
+	let query = $state(reader.query);
 	let result = $state<{ index: number; total: number } | null | undefined>(undefined);
 	let list: HTMLElement;
 
@@ -13,7 +13,13 @@
 		event.preventDefault();
 		const hit = reader.search(query);
 		result = hit;
+		reader.query = hit ? query.trim() : '';
 		if (hit) reader.jump(hit.id, { smooth: false });
+	}
+
+	function edit() {
+		result = undefined;
+		if (!query.trim()) reader.query = '';
 	}
 
 	$effect(() => {
@@ -35,7 +41,7 @@
 				placeholder="Search this book"
 				autocomplete="off"
 				bind:value={query}
-				oninput={() => (result = undefined)}
+				oninput={edit}
 			/>
 		</label>
 		{#if result === null}

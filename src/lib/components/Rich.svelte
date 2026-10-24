@@ -13,9 +13,27 @@
 		const target = anchors?.get(href) ?? anchors?.get(href.split('#')[0]);
 		if (target !== undefined) reader.jump(target);
 	}
+
+	/** Split text around case-insensitive matches of the current search so they can be highlighted. */
+	function pieces(text: string) {
+		const needle = reader.query.toLowerCase();
+		if (!needle) return [{ text, hit: false }];
+		const lower = text.toLowerCase();
+		const out: { text: string; hit: boolean }[] = [];
+		let from = 0;
+		for (let at = lower.indexOf(needle); at !== -1; at = lower.indexOf(needle, from)) {
+			if (at > from) out.push({ text: text.slice(from, at), hit: false });
+			out.push({ text: text.slice(at, at + needle.length), hit: true });
+			from = at + needle.length;
+		}
+		if (from < text.length) out.push({ text: text.slice(from), hit: false });
+		return out;
+	}
 </script>
 
-{#each runs as run, i (i)}{#if run.note}<button class="note {classes(run.marks)}" onclick={onnote}>{run.text}</button>{:else if run.href && /^(https?|mailto):/i.test(run.href)}<a class={classes(run.marks)} href={run.href} target="_blank" rel="noopener noreferrer">{run.text}</a>{:else if run.href}<a class={classes(run.marks)} href="#{run.href}" onclick={(e) => follow(e, run.href!)}>{run.text}</a>{:else}<span class={classes(run.marks)}>{run.text}</span>{/if}{/each}
+{#snippet marked(text: string)}{#each pieces(text) as piece, p (p)}{#if piece.hit}<mark>{piece.text}</mark>{:else}{piece.text}{/if}{/each}{/snippet}
+
+{#each runs as run, i (i)}{#if run.note}<button class="note {classes(run.marks)}" onclick={onnote}>{run.text}</button>{:else if run.href && /^(https?|mailto):/i.test(run.href)}<a class={classes(run.marks)} href={run.href} target="_blank" rel="noopener noreferrer">{@render marked(run.text)}</a>{:else if run.href}<a class={classes(run.marks)} href="#{run.href}" onclick={(e) => follow(e, run.href!)}>{@render marked(run.text)}</a>{:else}<span class={classes(run.marks)}>{@render marked(run.text)}</span>{/if}{/each}
 
 <style>
 	.b {
@@ -65,5 +83,10 @@
 		background: none;
 		border: 0;
 		cursor: pointer;
+	}
+	mark {
+		border-radius: 3px;
+		background: color-mix(in srgb, var(--accent) 35%, transparent);
+		color: inherit;
 	}
 </style>

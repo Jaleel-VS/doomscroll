@@ -100,6 +100,14 @@ Everything stays in the browser you read in.
 
 Positions and bookmarks are saved by spine document and opening words, not by post number. They survive parser updates and post-length changes. Clearing site data, or reading on another device, starts from scratch. **Settings** > **Clear library** removes every book and its progress.
 
+Doomscroll asks the browser to keep its storage persistent, so saved books aren't evicted when disk space runs low. Browsers decide whether to grant that.
+
+## Install it and read offline
+
+Doomscroll is an installable web app. On a phone, use **Share** > **Add to Home Screen** (Safari) or **Install app** (Chrome). On a computer, use the install button in the address bar.
+
+A service worker caches the app, so it opens and reads saved books with no connection. Adding it to the Home Screen also matters on iPhone, because Safari can delete storage for sites you haven't visited in a while, and Home Screen apps are exempt.
+
 ## Keyboard shortcuts
 
 | Key | Action |
