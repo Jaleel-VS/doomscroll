@@ -51,7 +51,7 @@ On a phone you get the mobile layout: a bottom tab bar, and a drawer for search 
 | --- | --- |
 | ![Mobile feed](docs/screenshots/mobile-feed.png) | ![Mobile chapter drawer](docs/screenshots/mobile-chapters.png) |
 
-The landing page keeps a list of the books you've opened, with how far you got in each.
+The landing page keeps a list of the books you've opened, with how far you got in each. To get back to it, open the account menu at the bottom of the sidebar and choose **Switch book**. On a phone, tap your cover in the top-left and use **Switch book** at the top of the drawer. Settings has the same button.
 
 ![The landing page with two books in progress](docs/screenshots/landing.png)
 

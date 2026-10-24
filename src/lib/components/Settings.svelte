@@ -147,6 +147,7 @@
 			another device starts you fresh.
 		</p>
 		<div class="buttons">
+			<button class="secondary" onclick={() => reader.home()}>Switch book</button>
 			<button class="secondary" onclick={() => settings.reset()}>Reset display settings</button>
 			<button class="danger" onclick={clear}>Clear library</button>
 		</div>

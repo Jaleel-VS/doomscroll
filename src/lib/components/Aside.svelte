@@ -32,6 +32,15 @@
 </script>
 
 <aside class="aside">
+	<!-- Shown only when this panel is the slide-out drawer, like the account row at the top of X's mobile drawer. -->
+	<div class="drawer-account">
+		{#if book.cover}<img src={book.cover} alt="" />{:else}<span class="initial">{book.title[0]}</span>{/if}
+		<span class="who">
+			<b>{book.title}</b>
+			<span>@{book.handle}</span>
+		</span>
+		<button class="switch" onclick={() => reader.home()}>Switch book</button>
+	</div>
 	<form class="search" onsubmit={search}>
 		<label>
 			<Icon name="search" size={18} />
@@ -85,6 +94,67 @@
 		gap: 16px;
 		height: 100%;
 		padding: 0 0 12px;
+	}
+	.drawer-account {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		padding: 16px 4px 4px;
+	}
+	.drawer-account img,
+	.drawer-account .initial {
+		width: 40px;
+		height: 40px;
+		flex: none;
+		border-radius: 50%;
+		object-fit: cover;
+	}
+	.drawer-account .initial {
+		display: grid;
+		place-items: center;
+		background: var(--accent);
+		color: var(--on-accent);
+		font-weight: 700;
+	}
+	.who {
+		display: flex;
+		flex-direction: column;
+		flex: 1;
+		min-width: 0;
+		line-height: 20px;
+	}
+	.who b,
+	.who span {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.who b {
+		color: var(--strong);
+	}
+	.who span {
+		color: var(--muted);
+	}
+	.switch {
+		flex: none;
+		height: 32px;
+		padding: 0 14px;
+		border: 1px solid var(--border);
+		border-radius: 999px;
+		background: none;
+		color: var(--strong);
+		font: inherit;
+		font-weight: 700;
+		font-size: 14px;
+		cursor: pointer;
+	}
+	.switch:hover {
+		background: var(--hover-strong);
+	}
+	@media (min-width: 1000px) {
+		.drawer-account {
+			display: none;
+		}
 	}
 	.search {
 		position: sticky;

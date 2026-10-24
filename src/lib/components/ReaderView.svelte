@@ -41,6 +41,12 @@
 	let headerHeight = $state(0);
 	let shift = $state(0);
 	let lastY = 0;
+	let accountMenu = $state(false);
+
+	function fromMenu(action: () => unknown) {
+		accountMenu = false;
+		action();
+	}
 
 	function followScroll() {
 		const y = window.scrollY;
@@ -64,6 +70,7 @@
 		const target = event.target as HTMLElement;
 		if (event.key === 'Escape') {
 			reader.drawer = false;
+			accountMenu = false;
 			target.blur?.();
 			return;
 		}
@@ -116,14 +123,31 @@
 			<Icon name="book" size={24} />
 			<span>Open book</span>
 		</button>
-		<button class="account" onclick={() => reader.home()} title="Switch book">
-			{#if book.cover}<img src={book.cover} alt="" />{:else}<span class="initial">{book.title[0]}</span>{/if}
-			<span class="who">
-				<b>{book.title}</b>
-				<span>@{book.handle}</span>
-			</span>
-			<Icon name="more" size={18} />
-		</button>
+		<div class="account-wrap">
+			<button class="account" onclick={() => (accountMenu = !accountMenu)} aria-haspopup="menu" aria-expanded={accountMenu}>
+				{#if book.cover}<img src={book.cover} alt="" />{:else}<span class="initial">{book.title[0]}</span>{/if}
+				<span class="who">
+					<b>{book.title}</b>
+					<span>@{book.handle}</span>
+				</span>
+				<Icon name="more" size={18} />
+			</button>
+			{#if accountMenu}
+				<button class="menu-scrim" aria-label="Close menu" onclick={() => (accountMenu = false)}></button>
+				<div class="account-menu" role="menu">
+					<div class="current">
+						{#if book.cover}<img src={book.cover} alt="" />{:else}<span class="initial">{book.title[0]}</span>{/if}
+						<span class="who">
+							<b>{book.title}</b>
+							<span>@{book.handle}</span>
+						</span>
+						<span class="tick"><Icon name="check" size={18} /></span>
+					</div>
+					<button role="menuitem" onclick={() => fromMenu(() => reader.home())}>Switch book</button>
+					<button role="menuitem" onclick={() => fromMenu(onpick)}>Open another book</button>
+				</div>
+			{/if}
+		</div>
 	</nav>
 
 	<main class="main" style:--header-shift="{shift}px">
@@ -197,6 +221,8 @@
 	.nav {
 		position: sticky;
 		top: 0;
+		/* Sticky makes the nav its own layer; lift it so the account menu can spill over the feed. */
+		z-index: 20;
 		display: flex;
 		flex-direction: column;
 		align-items: flex-start;
@@ -270,12 +296,65 @@
 	.post-button:hover {
 		opacity: 0.9;
 	}
+	.account-wrap {
+		position: relative;
+		width: 100%;
+		margin-top: auto;
+	}
 	.account {
 		gap: 12px;
 		width: 100%;
-		margin-top: auto;
 		padding: 12px;
 		text-align: left;
+	}
+	.nav .menu-scrim,
+	.nav .menu-scrim:hover {
+		position: fixed;
+		inset: 0;
+		z-index: 40;
+		border-radius: 0;
+		background: transparent;
+		cursor: default;
+	}
+	/* Like X's account menu: the current book on top, then the actions. */
+	.account-menu {
+		position: absolute;
+		left: 0;
+		bottom: calc(100% + 8px);
+		z-index: 41;
+		display: flex;
+		flex-direction: column;
+		width: 300px;
+		padding: 12px 0;
+		border-radius: 16px;
+		background: var(--bg);
+		box-shadow:
+			0 0 15px var(--shadow),
+			0 0 3px 1px var(--shadow);
+	}
+	.current {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		padding: 0 16px 12px;
+		margin-bottom: 4px;
+		border-bottom: 1px solid var(--border);
+	}
+	.current img,
+	.current .initial {
+		width: 40px;
+		height: 40px;
+		border-radius: 50%;
+		object-fit: cover;
+		flex: none;
+	}
+	.tick {
+		color: var(--green);
+	}
+	.nav .account-menu button {
+		padding: 12px 16px;
+		border-radius: 0;
+		font-weight: 700;
 	}
 	.account img,
 	.account .initial,
