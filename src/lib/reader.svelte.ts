@@ -2,7 +2,19 @@ import { tick } from 'svelte';
 import { SvelteSet } from 'svelte/reactivity';
 import { parseEpub } from './epub/parse';
 import type { Book, Post } from './epub/types';
-import { deleteBook, forgetState, listBooks, loadBook, loadState, saveBook, saveState, type SavedBook } from './storage';
+import { locate, resolve } from './locator';
+import { POST_LENGTHS, settings } from './settings.svelte';
+import {
+	deleteBook,
+	forgetState,
+	listBooks,
+	loadBook,
+	loadState,
+	saveBook,
+	saveState,
+	type Mark,
+	type SavedBook
+} from './storage';
 
 const PAGE = 40;
 
@@ -20,7 +32,7 @@ class Reader {
 	/** True while `jump` owns the scroll position; the feed must not re-anchor meanwhile. */
 	jumping = $state(false);
 
-	tab = $state<'home' | 'bookmarks'>('home');
+	tab = $state<'home' | 'bookmarks' | 'settings'>('home');
 	drawer = $state(false);
 	toast = $state('');
 	flash = $state(-1);
@@ -33,6 +45,7 @@ class Reader {
 	chapter = $derived(this.book?.posts[this.position]?.chapter ?? 0);
 	progress = $derived(this.book && this.book.posts.length > 1 ? this.position / (this.book.posts.length - 1) : 0);
 
+	private file: Blob | null = null;
 	private saveTimer = 0;
 	private toastTimer = 0;
 	private flashTimer = 0;
@@ -45,31 +58,46 @@ class Reader {
 		}
 	}
 
-	async open(file: Blob) {
+	/** Parse and show a book. `stay` keeps the current tab and only records the restored place (used by Settings). */
+	async open(file: Blob, { stay = false } = {}) {
 		this.loading = true;
 		this.error = '';
 		try {
-			const book = await parseEpub(file);
+			const book = await parseEpub(file, { limit: POST_LENGTHS[settings.postLength] });
 			if (!book.posts.length) throw new Error('No readable text found in this EPUB.');
 			this.close();
 			const state = loadState(book.key);
-			this.likes = new SvelteSet(state.likes);
-			this.reposts = new SvelteSet(state.reposts);
-			this.bookmarks = new SvelteSet(state.bookmarks);
+			const last = book.posts.length - 1;
+			const toId = (mark: Mark) => (typeof mark === 'number' ? Math.min(Math.max(mark, 0), last) : resolve(book, mark));
+			this.likes = new SvelteSet(state.likes.map(toId));
+			this.reposts = new SvelteSet(state.reposts.map(toId));
+			this.bookmarks = new SvelteSet(state.bookmarks.map(toId));
 			this.replies = new SvelteSet();
-			this.tab = 'home';
+			if (!stay) this.tab = 'home';
 			this.start = this.end = 0;
+			this.file = file;
 			this.book = book;
 			document.title = `${book.title} / Twitter`;
 			saveBook({ key: book.key, title: book.title, author: names(book.authors), file, cover: book.coverBlob, opened: Date.now() }).catch(
 				() => this.notify('Couldn’t save this book for next time')
 			);
-			await this.jump(Math.min(state.position, book.posts.length - 1), { flash: false });
+			const position = toId(state.position);
+			if (stay) this.position = position;
+			else await this.jump(position, { flash: false });
 		} catch (e) {
 			this.error = e instanceof Error ? e.message : String(e);
 		} finally {
 			this.loading = false;
 		}
+	}
+
+	/** Parse the open book again after a setting changed how posts are split; the reader's place and marks carry over. */
+	async reparse() {
+		if (!this.file) return;
+		const scrolled = window.scrollY;
+		await this.open(this.file, { stay: true });
+		await tick();
+		window.scrollTo(0, scrolled);
 	}
 
 	async openSaved(key: string) {
@@ -84,8 +112,10 @@ class Reader {
 	}
 
 	close() {
+		this.flush();
 		for (const url of this.book?.urls ?? []) URL.revokeObjectURL(url);
 		this.book = null;
+		this.file = null;
 		this.drawer = false;
 		document.title = 'Doomscroll';
 	}
@@ -158,20 +188,23 @@ class Reader {
 	}
 
 	private persist() {
+		clearTimeout(this.saveTimer);
+		this.saveTimer = window.setTimeout(() => this.flush(), 250);
+	}
+
+	/** Write reading state now. Called on close and when the page is hidden, so the debounce never loses a save. */
+	flush() {
+		clearTimeout(this.saveTimer);
 		const book = this.book;
 		if (!book) return;
-		clearTimeout(this.saveTimer);
-		this.saveTimer = window.setTimeout(
-			() =>
-				saveState(book.key, {
-					position: this.position,
-					total: book.posts.length,
-					likes: [...this.likes],
-					reposts: [...this.reposts],
-					bookmarks: [...this.bookmarks]
-				}),
-			250
-		);
+		const marks = (ids: Iterable<number>) => [...ids].map((id) => locate(book, id));
+		saveState(book.key, {
+			progress: this.progress,
+			position: locate(book, this.position),
+			likes: marks(this.likes),
+			reposts: marks(this.reposts),
+			bookmarks: marks(this.bookmarks)
+		});
 	}
 }
 

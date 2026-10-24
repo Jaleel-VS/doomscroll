@@ -1,3 +1,4 @@
+/* Lights out is the default; Settings switches `data-theme` on <html> and sets the accent and reading variables. */
 :root {
 	color-scheme: dark;
 	--bg: #000;
@@ -10,12 +11,49 @@
 	--search: #202327;
 	--hover: rgb(255 255 255 / 0.03);
 	--hover-strong: rgb(231 233 234 / 0.1);
+	--bar-bg: rgb(0 0 0 / 0.65);
+	--scrim: rgb(91 112 131 / 0.4);
+	--shadow: rgb(255 255 255 / 0.2);
 	--accent: #1d9bf0;
-	--accent-hover: #1a8cd8;
+	--on-accent: #fff;
+	--accent-hover: color-mix(in srgb, var(--accent) 88%, #000);
+	--accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
 	--pink: #f91880;
 	--green: #00ba7c;
 	--error: #f4212e;
+	--post-size: 15px;
+	--reading-font: TwitterChirp, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 	--header-h: 54px;
+}
+
+:root[data-theme='dim'] {
+	--bg: #15202b;
+	--fg: #f7f9f9;
+	--strong: #f7f9f9;
+	--muted: #8b98a5;
+	--border: #38444d;
+	--thread: #425364;
+	--card: #1e2732;
+	--search: #273340;
+	--hover-strong: rgb(247 249 249 / 0.1);
+	--bar-bg: rgb(21 32 43 / 0.75);
+}
+
+:root[data-theme='light'] {
+	color-scheme: light;
+	--bg: #fff;
+	--fg: #0f1419;
+	--strong: #0f1419;
+	--muted: #536471;
+	--border: #eff3f4;
+	--thread: #cfd9de;
+	--card: #f7f9f9;
+	--search: #eff3f4;
+	--hover: rgb(0 0 0 / 0.03);
+	--hover-strong: rgb(15 20 25 / 0.1);
+	--bar-bg: rgb(255 255 255 / 0.85);
+	--scrim: rgb(0 0 0 / 0.4);
+	--shadow: rgb(101 119 134 / 0.25);
 }
 
 @media (max-width: 640px) {
@@ -55,14 +93,14 @@ button {
 }
 
 ::selection {
-	background: rgb(29 155 240 / 0.4);
+	background: color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
 .beta {
 	display: inline-block;
 	padding: 2px 8px;
 	border-radius: 999px;
-	background: rgb(29 155 240 / 0.15);
+	background: var(--accent-soft);
 	color: var(--accent);
 	font-size: 12px;
 	line-height: 16px;

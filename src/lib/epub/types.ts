@@ -15,6 +15,8 @@ export type Media = { src: string; alt: string; opaque: boolean };
 
 export type Post = {
 	id: number;
+	/** Spine document the post came from; part of its stable locator. */
+	doc: string;
 	kind: 'text' | 'head' | 'code' | 'table';
 	runs: Run[];
 	plain: string;

@@ -21,28 +21,41 @@
 	const MAX = 240;
 	const MARGIN = 1500;
 
-	let feed: HTMLElement;
+	let feed = $state<HTMLElement>();
 	let top = $state<HTMLElement>();
 	let bottom = $state<HTMLElement>();
 	let filling = false;
 
 	const visible = $derived(book.posts.slice(reader.start, reader.end));
 
-	/** The post element under the sticky header, used as both reading position and scroll anchor. */
+	/** The post element under the sticky header: the reading position and the scroll anchor. */
 	function topPost() {
+		if (!feed) return null;
 		const rect = feed.getBoundingClientRect();
 		const header = document.querySelector('.header')?.getBoundingClientRect().bottom ?? 0;
 		return document.elementFromPoint(rect.left + rect.width / 2, header + 4)?.closest<HTMLElement>('[data-i]') ?? null;
 	}
 
-	/** Apply a window change while keeping the post under the header visually still. */
-	async function preserve(change: () => void) {
-		const anchor = topPost();
-		const before = anchor?.getBoundingClientRect().top ?? 0;
-		change();
-		await tick();
-		const delta = anchor?.isConnected ? anchor.getBoundingClientRect().top - before : 0;
-		if (delta && !reader.jumping) window.scrollBy(0, delta);
+	/*
+	 * Scroll anchoring, done by hand because Safari has none and the browser's version fights the windowed feed.
+	 * Remember where the post under the header sits; whenever the feed changes height (posts added or trimmed above,
+	 * images loading, a font size change) scroll by however far that post moved. If the page scrolled since the pin
+	 * (a jump, or the reader), that movement was intentional: re-pin instead of undoing it.
+	 */
+	let pinned: { el: HTMLElement; top: number; scrollY: number } | null = null;
+
+	function pin() {
+		const el = reader.tab === 'home' ? topPost() : null;
+		pinned = el ? { el, top: el.getBoundingClientRect().top, scrollY: window.scrollY } : null;
+	}
+
+	function keepPinned() {
+		if (reader.jumping) return;
+		if (!pinned?.el.isConnected || pinned.scrollY !== window.scrollY) return pin();
+		const delta = pinned.el.getBoundingClientRect().top - pinned.top;
+		if (!delta) return;
+		window.scrollBy(0, delta);
+		pinned.scrollY = window.scrollY;
 	}
 
 	async function fill() {
@@ -51,18 +64,16 @@
 		filling = true;
 		try {
 			const total = book.posts.length;
-			for (let guard = 0; guard < 50 && !reader.jumping; guard++) {
+			for (let guard = 0; guard < 50 && !reader.jumping && head.isConnected; guard++) {
 				if (tail.getBoundingClientRect().top < innerHeight + MARGIN && reader.end < total) {
-					await preserve(() => {
-						reader.end = Math.min(total, reader.end + PAGE);
-						reader.start = Math.max(reader.start, reader.end - MAX);
-					});
+					reader.end = Math.min(total, reader.end + PAGE);
+					reader.start = Math.max(reader.start, reader.end - MAX);
 				} else if (head.getBoundingClientRect().bottom > -MARGIN && reader.start > 0) {
-					await preserve(() => {
-						reader.start = Math.max(0, reader.start - PAGE);
-						reader.end = Math.min(reader.end, reader.start + MAX);
-					});
+					reader.start = Math.max(0, reader.start - PAGE);
+					reader.end = Math.min(reader.end, reader.start + MAX);
 				} else break;
+				await tick();
+				keepPinned();
 			}
 		} finally {
 			filling = false;
@@ -71,6 +82,7 @@
 
 	let frame = 0;
 	function onscroll() {
+		pin();
 		cancelAnimationFrame(frame);
 		frame = requestAnimationFrame(() => {
 			if (reader.tab !== 'home') return;
@@ -83,6 +95,19 @@
 	$effect(() => {
 		void [reader.start, reader.end, reader.tab, reader.jumping];
 		tick().then(fill);
+	});
+
+	// A finished jump moved the page on purpose: anchor to wherever it landed. Window changes must not re-pin,
+	// or the shift they cause would be recorded instead of corrected.
+	$effect(() => {
+		if (!reader.jumping) pin();
+	});
+
+	$effect(() => {
+		if (!feed) return;
+		const observer = new ResizeObserver(keepPinned);
+		observer.observe(feed);
+		return () => observer.disconnect();
 	});
 
 	onMount(() => () => cancelAnimationFrame(frame));
@@ -169,7 +194,7 @@
 		display: grid;
 		place-items: center;
 		background: var(--accent);
-		color: #fff;
+		color: var(--on-accent);
 		font-size: 56px;
 		font-weight: 800;
 	}

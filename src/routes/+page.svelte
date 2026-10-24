@@ -28,6 +28,7 @@
 </script>
 
 <svelte:window
+	onpagehide={() => reader.flush()}
 	ondragover={(e) => {
 		e.preventDefault();
 		dragging = true;
@@ -78,7 +79,7 @@
 		place-items: center;
 		border: 2px dashed var(--accent);
 		border-radius: 24px;
-		background: rgb(29 155 240 / 0.12);
+		background: var(--accent-soft);
 		backdrop-filter: blur(4px);
 		color: var(--strong);
 		font-size: 24px;
@@ -94,9 +95,9 @@
 		padding: 12px 16px;
 		border-radius: 4px;
 		background: var(--accent);
-		color: #fff;
+		color: var(--on-accent);
 		font-size: 15px;
-		box-shadow: 0 0 15px rgb(255 255 255 / 0.2);
+		box-shadow: 0 0 15px var(--shadow);
 		animation: rise 0.2s ease-out;
 	}
 	@keyframes rise {

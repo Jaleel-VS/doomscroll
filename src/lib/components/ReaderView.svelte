@@ -2,18 +2,22 @@
 	import Aside from './Aside.svelte';
 	import Feed from './Feed.svelte';
 	import Icon, { type IconName } from './Icon.svelte';
+	import Settings from './Settings.svelte';
 	import { reader } from '#lib/reader.svelte.js';
 	import type { Book } from '#lib/epub/types.js';
 
 	let { book, onpick }: { book: Book; onpick: () => void } = $props();
 
-	const nav: { label: string; icon: IconName; active: IconName; tab?: 'home' | 'bookmarks'; drawer?: boolean }[] = [
+	type Tab = typeof reader.tab;
+
+	const nav: { label: string; icon: IconName; active: IconName; tab?: Tab; drawer?: boolean }[] = [
 		{ label: 'Home', icon: 'home', active: 'homeActive', tab: 'home' },
 		{ label: 'Chapters', icon: 'chapters', active: 'chapters', drawer: true },
-		{ label: 'Bookmarks', icon: 'bookmark', active: 'bookmarked', tab: 'bookmarks' }
+		{ label: 'Bookmarks', icon: 'bookmark', active: 'bookmarked', tab: 'bookmarks' },
+		{ label: 'Settings', icon: 'settings', active: 'settings', tab: 'settings' }
 	];
 
-	function setTab(tab: 'home' | 'bookmarks') {
+	function setTab(tab: Tab) {
 		reader.drawer = false;
 		if (tab === reader.tab) {
 			window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -21,7 +25,7 @@
 		}
 		if (tab === 'home') reader.jump(reader.position, { flash: false });
 		else {
-			reader.tab = 'bookmarks';
+			reader.tab = tab;
 			window.scrollTo(0, 0);
 		}
 	}
@@ -97,15 +101,26 @@
 				<span class="bird"><Icon name="bird" size={24} /><span class="beta">Beta</span></span>
 				<button class="mini-open" onclick={onpick} aria-label="Open book"><Icon name="book" size={22} /></button>
 			</div>
-			<div class="tabs" role="tablist">
-				<button role="tab" aria-selected={reader.tab === 'home'} onclick={() => setTab('home')}><span>For you</span></button>
-				<button role="tab" aria-selected={reader.tab === 'bookmarks'} onclick={() => setTab('bookmarks')}>
-					<span>Bookmarks</span>
-				</button>
-			</div>
+			{#if reader.tab === 'settings'}
+				<div class="titlebar">
+					<button class="back" onclick={() => setTab('home')} aria-label="Back to the book"><Icon name="back" size={20} /></button>
+					<h1>Settings</h1>
+				</div>
+			{:else}
+				<div class="tabs" role="tablist">
+					<button role="tab" aria-selected={reader.tab === 'home'} onclick={() => setTab('home')}><span>For you</span></button>
+					<button role="tab" aria-selected={reader.tab === 'bookmarks'} onclick={() => setTab('bookmarks')}>
+						<span>Bookmarks</span>
+					</button>
+				</div>
+			{/if}
 			<div class="progress" style:transform="scaleX({reader.progress})"></div>
 		</header>
-		<Feed {book} />
+		{#if reader.tab === 'settings'}
+			<Settings {book} />
+		{:else}
+			<Feed {book} />
+		{/if}
 	</main>
 
 	<div class="side"><Aside {book} /></div>
@@ -128,6 +143,9 @@
 		</button>
 		<button class:on={reader.tab === 'bookmarks'} onclick={() => setTab('bookmarks')} aria-label="Bookmarks">
 			<Icon name={reader.tab === 'bookmarks' ? 'bookmarked' : 'bookmark'} size={26} />
+		</button>
+		<button class:on={reader.tab === 'settings'} onclick={() => setTab('settings')} aria-label="Settings">
+			<Icon name="settings" size={26} />
 		</button>
 	</nav>
 </div>
@@ -174,7 +192,7 @@
 		color: var(--accent);
 	}
 	.nav .logo:hover {
-		background: rgb(29 155 240 / 0.1);
+		background: var(--accent-soft);
 	}
 	.bird {
 		display: flex;
@@ -237,7 +255,7 @@
 		display: grid;
 		place-items: center;
 		background: var(--accent);
-		color: #fff;
+		color: var(--on-accent);
 		font-weight: 700;
 	}
 	.who {
@@ -269,13 +287,40 @@
 		position: sticky;
 		top: 0;
 		z-index: 10;
-		background: rgb(0 0 0 / 0.65);
+		background: var(--bar-bg);
 		backdrop-filter: blur(12px);
 		-webkit-backdrop-filter: blur(12px);
 		border-bottom: 1px solid var(--border);
 	}
 	.mobile-bar {
 		display: none;
+	}
+	.titlebar {
+		display: flex;
+		align-items: center;
+		gap: 24px;
+		height: 53px;
+		padding: 0 16px 0 8px;
+	}
+	.titlebar h1 {
+		margin: 0;
+		font-size: 20px;
+		font-weight: 800;
+		color: var(--strong);
+	}
+	.back {
+		display: grid;
+		place-items: center;
+		width: 36px;
+		height: 36px;
+		border: 0;
+		border-radius: 50%;
+		background: none;
+		color: var(--strong);
+		cursor: pointer;
+	}
+	.back:hover {
+		background: var(--hover-strong);
 	}
 	.tabs {
 		display: flex;
@@ -398,7 +443,7 @@
 			inset: 0;
 			z-index: 20;
 			border: 0;
-			background: rgb(91 112 131 / 0.4);
+			background: var(--scrim);
 		}
 	}
 	@media (max-width: 640px) {
@@ -438,7 +483,7 @@
 			z-index: 10;
 			height: 53px;
 			padding-bottom: env(safe-area-inset-bottom);
-			background: rgb(0 0 0 / 0.85);
+			background: var(--bar-bg);
 			backdrop-filter: blur(12px);
 			border-top: 1px solid var(--border);
 		}

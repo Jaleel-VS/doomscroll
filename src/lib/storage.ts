@@ -1,3 +1,5 @@
+import type { Locator } from './locator';
+
 /** Local persistence: the book files live in IndexedDB, small per-book reading state in localStorage. */
 
 export type SavedBook = {
@@ -9,7 +11,10 @@ export type SavedBook = {
 	opened: number;
 };
 
-export type ReadingState = { position: number; total: number; likes: number[]; reposts: number[]; bookmarks: number[] };
+/** A saved post. Plain numbers are post ids written before locators existed; they resolve as-is once, then get rewritten. */
+export type Mark = Locator | number;
+
+export type ReadingState = { progress: number; position: Mark; likes: Mark[]; reposts: Mark[]; bookmarks: Mark[] };
 
 const DB = 'doomscroll';
 const STORE = 'books';
@@ -29,13 +34,22 @@ function transact<T>(mode: IDBTransactionMode, run: (store: IDBObjectStore) => I
 export const saveBook = (book: SavedBook) => transact('readwrite', (s) => s.put(book));
 export const loadBook = (key: string) => transact<SavedBook | undefined>('readonly', (s) => s.get(key));
 export const deleteBook = (key: string) => transact('readwrite', (s) => s.delete(key));
+/** Remove every saved book and its reading state from this browser. Display settings stay. */
+export async function clearLibrary() {
+	await transact('readwrite', (s) => s.clear());
+	for (const key of Object.keys(localStorage)) if (key.startsWith('state:')) localStorage.removeItem(key);
+}
 export const listBooks = async () =>
 	(await transact<SavedBook[]>('readonly', (s) => s.getAll())).sort((a, b) => b.opened - a.opened);
 
 export function loadState(key: string): ReadingState {
-	const empty = { position: 0, total: 0, likes: [], reposts: [], bookmarks: [] };
+	const empty: ReadingState = { progress: 0, position: 0, likes: [], reposts: [], bookmarks: [] };
 	try {
-		return { ...empty, ...JSON.parse(localStorage.getItem(`state:${key}`) ?? '{}') };
+		const saved = JSON.parse(localStorage.getItem(`state:${key}`) ?? '{}');
+		// Older saves stored `position` as an id plus the post count instead of a progress fraction.
+		saved.progress ??= typeof saved.position === 'number' && saved.total > 1 ? saved.position / (saved.total - 1) : 0;
+		delete saved.total;
+		return { ...empty, ...saved };
 	} catch {
 		return empty;
 	}

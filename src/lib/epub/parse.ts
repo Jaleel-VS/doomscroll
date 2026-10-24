@@ -1,5 +1,5 @@
 import { openZip } from './zip';
-import { splitRuns, trimRuns } from './split';
+import { POST_LIMIT, splitRuns, trimRuns } from './split';
 import {
 	BOLD,
 	CODE,
@@ -67,7 +67,9 @@ type ManifestItem = { id: string; href: string; type: string; props: string };
 type TocEntry = { title: string; href: string; depth: number };
 type Context = { quote: boolean; marks: number };
 
-export async function parseEpub(file: Blob): Promise<Book> {
+export type ParseOptions = { /** Thread split size in characters; Infinity keeps one post per paragraph. */ limit?: number };
+
+export async function parseEpub(file: Blob, { limit = POST_LIMIT }: ParseOptions = {}): Promise<Book> {
 	const zip = openZip(await file.arrayBuffer());
 	const read = async (path: string) => {
 		const bytes = await zip(path);
@@ -111,7 +113,7 @@ export async function parseEpub(file: Blob): Promise<Book> {
 		byId.get(opf.querySelector('meta[name="cover"]')?.getAttribute('content') ?? '') ??
 		manifest.find((item) => /^image\//.test(item.type) && /cover/i.test(item.id + item.href));
 
-	const builder = new Builder(lang);
+	const builder = new Builder(lang, limit);
 	for (const item of spine) {
 		const source = await read(item.href);
 		if (!source) continue;
@@ -211,7 +213,10 @@ class Builder {
 	private loadedCss = new Set<string>();
 	private path = '';
 
-	constructor(private lang: string) {}
+	constructor(
+		private lang: string,
+		private limit: number
+	) {}
 
 	async addStyles(doc: Document, path: string, read: (p: string) => Promise<string | null>) {
 		for (const link of doc.querySelectorAll('link[rel~="stylesheet"][href]')) {
@@ -333,7 +338,7 @@ class Builder {
 			} else bullet = '•';
 		}
 
-		const chunks = splitRuns(runs, this.lang);
+		const chunks = splitRuns(runs, this.lang, this.limit);
 		chunks.forEach((chunk, part) =>
 			this.push({
 				kind: 'text',
@@ -424,7 +429,17 @@ class Builder {
 
 	private push(fields: Partial<Post> & Pick<Post, 'kind' | 'runs' | 'plain'>) {
 		const notes = [...new Set(fields.runs.filter((r) => r.note && r.href).map((r) => r.href!))];
-		this.posts.push({ id: this.posts.length, media: [], part: 0, parts: 1, quote: false, chapter: 0, notes, ...fields });
+		this.posts.push({
+			id: this.posts.length,
+			doc: this.path,
+			media: [],
+			part: 0,
+			parts: 1,
+			quote: false,
+			chapter: 0,
+			notes,
+			...fields
+		});
 	}
 }
 

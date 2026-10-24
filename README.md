@@ -58,7 +58,7 @@ The screenshots use public-domain books from [Project Gutenberg](https://www.gut
 | In the EPUB | In the feed |
 | --- | --- |
 | Paragraph, list item, or loose text | A post. Lists keep their `•` or `1.` markers. |
-| Paragraph over 280 characters | A thread, split at sentence ends into posts of similar length. |
+| Paragraph over 280 characters | A thread, split at sentence ends into posts of similar length. The limit is a setting. |
 | `h1` to `h6`, a large-font CSS class, or a line that matches the table of contents | A section header. |
 | Table of contents (EPUB 3 nav or NCX) | The "What's happening" trends, with post counts and your progress. |
 | `blockquote` | A quote card. |
@@ -72,6 +72,33 @@ The screenshots use public-domain books from [Project Gutenberg](https://www.gut
 Bold, italic, and monospace come from the HTML tags and from the book's CSS classes. That matters for books converted with Calibre, which often style everything through classes.
 
 The like, repost, reply, and view counts are made up. They come from a hash of each post, so they stay the same between visits. Your likes, reposts, and bookmarks are real and saved per book.
+
+## Settings
+
+Settings is in the side navigation, or the gear in the bottom bar on a phone. It works like Twitter's display settings, with a live preview of the post you're on.
+
+| Setting | Options |
+| --- | --- |
+| Font size | Five steps, from 14 to 21 pixels |
+| Font | Sans, Serif, or Hyperlegible ([Atkinson Hyperlegible Next](https://www.brailleinstitute.org/freefont/), bundled with the app) |
+| Color | Twitter's six accent colors |
+| Background | Default (light), Dim, or Lights out |
+| Post length | 280 characters, 1,000 characters, or no limit (one post per paragraph) |
+| Engagement | Show or hide the made-up like and view counts |
+
+Settings apply to every book in the browser. Changing the post length re-reads the open book and keeps your place, likes, and bookmarks.
+
+## Where your data lives
+
+Everything stays in the browser you read in.
+
+| What | Where |
+| --- | --- |
+| Book files and covers | IndexedDB, database `doomscroll` |
+| Reading position, likes, reposts, and bookmarks | `localStorage`, one `state:` entry per book |
+| Settings | `localStorage`, key `settings` |
+
+Positions and bookmarks are saved by spine document and opening words, not by post number. They survive parser updates and post-length changes. Clearing site data, or reading on another device, starts from scratch. **Settings** > **Clear library** removes every book and its progress.
 
 ## Keyboard shortcuts
 
@@ -102,6 +129,8 @@ The like, repost, reply, and view counts are made up. They come from a hash of e
 | `src/lib/epub/split.ts` | Splits long paragraphs into threads. |
 | `src/lib/reader.svelte.ts` | Holds the reading state: the rendered window of posts, jumps, likes, bookmarks, and search. |
 | `src/lib/storage.ts` | Saves books to IndexedDB and reading progress to `localStorage`. |
+| `src/lib/locator.ts` | Turns post numbers into locators that survive re-parsing, and back. |
+| `src/lib/settings.svelte.ts` | Holds display settings and applies them as CSS variables. |
 | `src/lib/components/` | The Twitter-style UI. |
 
 Doomscroll isn't affiliated with Twitter or X. The bird logo belongs to X Corp.

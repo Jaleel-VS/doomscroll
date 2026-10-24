@@ -11,10 +11,7 @@
 		return () => current.forEach((url) => url && URL.revokeObjectURL(url));
 	});
 
-	function percent(key: string) {
-		const state = loadState(key);
-		return state.total > 1 ? Math.round((state.position / (state.total - 1)) * 100) : 0;
-	}
+	const percent = (key: string) => Math.round(loadState(key).progress * 100);
 </script>
 
 <div class="landing">
@@ -105,7 +102,7 @@
 		border: 0;
 		border-radius: 999px;
 		background: var(--accent);
-		color: #fff;
+		color: var(--on-accent);
 		font: inherit;
 		font-weight: 700;
 		cursor: pointer;
@@ -131,7 +128,7 @@
 	.spinner {
 		width: 26px;
 		height: 26px;
-		border: 3px solid rgb(29 155 240 / 0.25);
+		border: 3px solid var(--accent-soft);
 		border-top-color: var(--accent);
 		border-radius: 50%;
 		animation: spin 0.75s linear infinite;
@@ -185,7 +182,7 @@
 		display: grid;
 		place-items: center;
 		background: var(--accent);
-		color: #fff;
+		color: var(--on-accent);
 		font-weight: 700;
 	}
 	.who {

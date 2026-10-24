@@ -2,6 +2,7 @@
 	import Icon from './Icon.svelte';
 	import Rich from './Rich.svelte';
 	import { compact, engagement, reader } from '#lib/reader.svelte.js';
+	import { settings } from '#lib/settings.svelte.js';
 	import type { Book, Post } from '#lib/epub/types.js';
 
 	let { post, book, onopen }: { post: Post; book: Book; onopen?: () => void } = $props();
@@ -88,15 +89,17 @@
 
 			<div class="actions">
 				<button class="action reply" class:has-notes={notes.length > 0} title={notes.length ? 'Show footnotes' : 'Reply'} onclick={openReplies}>
-					<span class="halo"><Icon name="reply" size={18} /></span>{compact(notes.length || stats.replies)}
+					<span class="halo"><Icon name="reply" size={18} /></span>{#if notes.length}{notes.length}{:else if settings.metrics}{compact(stats.replies)}{/if}
 				</button>
 				<button class="action repost" class:on={reposted} title="Repost" onclick={() => reader.toggle(reader.reposts, post.id)}>
-					<span class="halo"><Icon name="repost" size={18} /></span>{compact(stats.reposts + (reposted ? 1 : 0))}
+					<span class="halo"><Icon name="repost" size={18} /></span>{#if settings.metrics}{compact(stats.reposts + (reposted ? 1 : 0))}{/if}
 				</button>
 				<button class="action like" class:on={liked} title="Like" onclick={() => reader.toggle(reader.likes, post.id)}>
-					<span class="halo"><Icon name={liked ? 'liked' : 'like'} size={18} /></span>{compact(stats.likes + (liked ? 1 : 0))}
+					<span class="halo"><Icon name={liked ? 'liked' : 'like'} size={18} /></span>{#if settings.metrics}{compact(stats.likes + (liked ? 1 : 0))}{/if}
 				</button>
-				<span class="action views" title="Views"><span class="halo"><Icon name="views" size={18} /></span>{compact(stats.views)}</span>
+				{#if settings.metrics}
+					<span class="action views" title="Views"><span class="halo"><Icon name="views" size={18} /></span>{compact(stats.views)}</span>
+				{/if}
 				<span class="end">
 					<button class="action bookmark" class:on={bookmarked} title="Bookmark" onclick={() => reader.toggle(reader.bookmarks, post.id)}>
 						<span class="halo"><Icon name={bookmarked ? 'bookmarked' : 'bookmark'} size={18} /></span>
@@ -131,8 +134,9 @@
 	.section {
 		margin: 0;
 		padding: 20px 16px 12px;
-		font-size: 20px;
-		line-height: 24px;
+		font-family: var(--reading-font);
+		font-size: calc(var(--post-size) * 1.33);
+		line-height: 1.2;
 		font-weight: 800;
 		color: var(--strong);
 		border-bottom: 1px solid var(--border);
@@ -187,7 +191,7 @@
 	}
 	@keyframes flash {
 		from {
-			background: rgb(29 155 240 / 0.18);
+			background: color-mix(in srgb, var(--accent) 18%, transparent);
 		}
 	}
 
@@ -204,7 +208,7 @@
 		display: grid;
 		place-items: center;
 		background: var(--accent);
-		color: #fff;
+		color: var(--on-accent);
 		font-weight: 700;
 		font-size: 18px;
 	}
@@ -250,6 +254,9 @@
 
 	.text {
 		margin-top: 2px;
+		font-family: var(--reading-font);
+		font-size: var(--post-size);
+		line-height: 1.34;
 		white-space: pre-wrap;
 		overflow-wrap: anywhere;
 	}
@@ -279,7 +286,7 @@
 	.code {
 		padding: 12px 14px;
 		background: var(--card);
-		font: 13px/1.5 ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+		font: calc(var(--post-size) - 2px) / 1.5 ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 		white-space: pre-wrap;
 		overflow-wrap: anywhere;
 	}
@@ -289,8 +296,9 @@
 	table {
 		border-collapse: collapse;
 		min-width: 100%;
-		font-size: 14px;
-		line-height: 18px;
+		font-family: var(--reading-font);
+		font-size: calc(var(--post-size) - 1px);
+		line-height: 1.3;
 	}
 	th,
 	td {
@@ -369,7 +377,7 @@
 	.views:hover .halo,
 	.bookmark:hover .halo,
 	.share:hover .halo {
-		background: rgb(29 155 240 / 0.1);
+		background: var(--accent-soft);
 	}
 	.repost:hover,
 	.repost.on {
