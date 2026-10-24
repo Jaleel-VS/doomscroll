@@ -7,7 +7,10 @@ import { assets, immutable, prerendered } from '$app/manifest';
 import { version } from '$app/env';
 
 const CACHE = `doomscroll-${version}`;
-const SHELL = [...immutable, ...assets, ...prerendered].map(({ path }) => new URL(path, self.registration.scope).pathname);
+// The demo book is several megabytes; it's fetched only when someone taps "Try it", then lives in IndexedDB.
+const SHELL = [...immutable, ...assets, ...prerendered]
+	.map(({ path }) => new URL(path, self.registration.scope).pathname)
+	.filter((path) => !path.startsWith('/demo/'));
 const shell = new Set(SHELL);
 
 self.addEventListener('install', (event) => {

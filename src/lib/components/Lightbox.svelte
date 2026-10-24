@@ -23,6 +23,11 @@
 			alt={lightbox.photo.alt}
 			style:--ratio={lightbox.photo.width / lightbox.photo.height || 1}
 			style:--natural="{lightbox.photo.width}px"
+			onload={(e) => {
+				// A lazily loaded post image may not have had a size yet when it was clicked.
+				const img = e.currentTarget as HTMLImageElement;
+				if (lightbox.photo && !lightbox.photo.width) Object.assign(lightbox.photo, { width: img.naturalWidth, height: img.naturalHeight });
+			}}
 		/>
 		<button class="close" aria-label="Close" onclick={() => lightbox.close()}><Icon name="close" size={20} /></button>
 	</div>

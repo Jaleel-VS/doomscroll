@@ -11,7 +11,8 @@
 		[
 			`@${book.handle}`,
 			book.authors.length && `by ${names(book.authors)}`,
-			book.translators.length && `translated by ${names(book.translators)}`
+			book.translators.length && `translated by ${names(book.translators)}`,
+			book.illustrators.length && `illustrated by ${names(book.illustrators)}`
 		]
 			.filter(Boolean)
 			.join(' · ')

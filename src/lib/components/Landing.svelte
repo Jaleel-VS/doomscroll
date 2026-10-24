@@ -24,7 +24,8 @@
 			<div class="loading"><span class="spinner"></span> Loading your book…</div>
 		{:else}
 			<button class="primary" onclick={onpick}>Open an EPUB</button>
-			<p class="muted fine">or drop one anywhere on this page. Books stay on your device.</p>
+			<button class="secondary" onclick={() => reader.openDemo()}>Try it with <i>Alice in Wonderland</i></button>
+			<p class="muted fine">or drop an EPUB anywhere on this page. Books stay on your device.</p>
 		{/if}
 		{#if reader.error}<p class="error">{reader.error}</p>{/if}
 
@@ -110,6 +111,24 @@
 	}
 	.primary:hover {
 		background: var(--accent-hover);
+	}
+	.secondary {
+		display: block;
+		width: 300px;
+		max-width: 100%;
+		height: 44px;
+		margin-top: 12px;
+		border: 1px solid var(--border);
+		border-radius: 999px;
+		background: none;
+		color: var(--accent);
+		font: inherit;
+		font-weight: 700;
+		cursor: pointer;
+		transition: background-color 0.2s;
+	}
+	.secondary:hover {
+		background: var(--accent-soft);
 	}
 	.fine {
 		margin: 8px 0 0;

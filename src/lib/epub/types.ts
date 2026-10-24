@@ -45,6 +45,7 @@ export type Book = {
 	author: string;
 	authors: string[];
 	translators: string[];
+	illustrators: string[];
 	handle: string;
 	description: string;
 	year: string;

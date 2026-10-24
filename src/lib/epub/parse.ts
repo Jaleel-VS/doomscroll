@@ -93,7 +93,7 @@ export async function parseEpub(file: Blob, { limit = POST_LIMIT }: ParseOptions
 		.trim();
 	const metaTitle = meta('title')[0];
 	const title = (metaTitle && !/^(book )?title$|^untitled$|^unknown$/i.test(metaTitle) ? metaTitle : fileTitle) || 'Untitled';
-	const { authors, translators } = readCreators(opf);
+	const { authors, translators, illustrators } = readCreators(opf);
 	const lang = meta('language')[0] || 'en';
 	const description = htmlToText(meta('description')[0] ?? '');
 	const year = meta('date')[0]?.match(/\d{4}/)?.[0] ?? '';
@@ -162,6 +162,7 @@ export async function parseEpub(file: Blob, { limit = POST_LIMIT }: ParseOptions
 		author: authors[0] ?? 'Unknown author',
 		authors,
 		translators,
+		illustrators,
 		handle: handle || 'book',
 		description,
 		year,
@@ -175,22 +176,32 @@ export async function parseEpub(file: Blob, { limit = POST_LIMIT }: ParseOptions
 	};
 }
 
-/** Authors and translators from `dc:creator`, honouring EPUB 2 `opf:role` and EPUB 3 `refines` roles. */
+/**
+ * Authors from `dc:creator`; translators and illustrators from `dc:creator` or `dc:contributor`, where many books list
+ * them. Honours EPUB 2 `opf:role` and EPUB 3 `refines` roles.
+ */
 function readCreators(opf: Document) {
 	const roles = new Map<string, string>();
 	for (const meta of opf.getElementsByTagNameNS('*', 'meta')) {
 		const target = meta.getAttribute('refines');
 		if (target && meta.getAttribute('property') === 'role') roles.set(target.slice(1), meta.textContent?.trim() ?? '');
 	}
-	const creators = Array.from(opf.getElementsByTagNameNS('*', 'creator'), (el) => ({
-		names: splitNames(el.textContent ?? ''),
-		role: (el.getAttributeNS(OPF, 'role') || el.getAttribute('opf:role') || roles.get(el.getAttribute('id') ?? '') || '').toLowerCase()
-	}));
+	const people = (tag: string) =>
+		Array.from(opf.getElementsByTagNameNS('*', tag), (el) => ({
+			names: splitNames(el.textContent ?? ''),
+			role: (el.getAttributeNS(OPF, 'role') || el.getAttribute('opf:role') || roles.get(el.getAttribute('id') ?? '') || '').toLowerCase()
+		}));
+	const creators = people('creator');
+	const everyone = [...creators, ...people('contributor')];
 	const names = (list: typeof creators) => [...new Set(list.flatMap((c) => c.names))];
 	// Unmarked creators count as authors; anthologies credited only to editors still need a byline.
 	let authors = names(creators.filter((c) => !c.role || c.role === 'aut'));
 	if (!authors.length) authors = names(creators.filter((c) => c.role !== 'trl'));
-	return { authors, translators: names(creators.filter((c) => c.role === 'trl')) };
+	return {
+		authors,
+		translators: names(everyone.filter((c) => c.role === 'trl')),
+		illustrators: names(everyone.filter((c) => c.role === 'ill')).filter((name) => !authors.includes(name))
+	};
 }
 
 /** One `dc:creator` can hold several people ("A & B", "A, B, and C") or a sorted name ("Dinniman, Matt"). */

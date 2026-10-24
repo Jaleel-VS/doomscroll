@@ -4,7 +4,7 @@ Doomscroll turns an EPUB into a Twitter timeline, so you can read a book the way
 
 Everything runs in your browser. The book is parsed on your device and saved in IndexedDB, and nothing is uploaded.
 
-Try it at [doomscroll.jaleel.me](https://doomscroll.jaleel.me). You bring the EPUB.
+Try it at [doomscroll.jaleel.me](https://doomscroll.jaleel.me). Bring your own EPUB, or tap **Try it with Alice in Wonderland** to read the bundled demo book.
 
 Doomscroll is in beta. Books with unusual markup can still come out wrong. If a book looks broken, [open an issue](https://github.com/Jaleel-VS/doomscroll/issues) and say which book it was.
 
@@ -72,7 +72,7 @@ The screenshots use public-domain books from [Project Gutenberg](https://www.gut
 | `pre`, monospace CSS, or a shaded box with one `div` per line | A code card. |
 | Footnote reference (`noteref` type or role, or a superscript link) | The reply count. Click it to read the note as a reply. |
 | The book's own contents page | Dropped, because the sidebar already lists the chapters. |
-| `dc:creator` | The first author writes every post. The profile lists every author and translator. |
+| `dc:creator` and `dc:contributor` | The first author writes every post. The profile lists every author, plus translators and illustrators. |
 
 Bold, italic, and monospace come from the HTML tags and from the book's CSS classes. That matters for books converted with Calibre, which often style everything through classes.
 
@@ -150,5 +150,9 @@ A service worker caches the app, so it opens and reads saved books with no conne
 | `src/lib/locator.ts` | Turns post numbers into locators that survive re-parsing, and back. |
 | `src/lib/settings.svelte.ts` | Holds display settings and applies them as CSS variables. |
 | `src/lib/components/` | The Twitter-style UI. |
+
+## Credits
+
+The demo book is [*Alice's Adventures in Wonderland*](https://standardebooks.org/ebooks/lewis-carroll/alices-adventures-in-wonderland/john-tenniel) by Lewis Carroll, illustrated by John Tenniel, in the [Standard Ebooks](https://standardebooks.org/) edition. The text and illustrations are in the public domain, and Standard Ebooks dedicates its work on the edition to the public domain under [CC0](https://creativecommons.org/publicdomain/zero/1.0/). The copy in `static/demo/` is repacked with smaller images (the 2x illustrations removed and the rest reduced to 16 greys) to keep the download under 3 MB.
 
 Doomscroll isn't affiliated with Twitter or X. The bird logo belongs to X Corp.

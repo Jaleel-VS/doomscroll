@@ -130,6 +130,20 @@ class Reader {
 		if (saved) await this.open(saved.file);
 	}
 
+	/** Open the bundled demo book (Standard Ebooks' public-domain Alice), downloading it on first use. */
+	async openDemo() {
+		this.loading = true;
+		this.error = '';
+		try {
+			const response = await fetch('/demo/alice.epub');
+			if (!response.ok) throw new Error(`HTTP ${response.status}`);
+			await this.open(new File([await response.blob()], 'alice.epub', { type: 'application/epub+zip' }));
+		} catch {
+			this.error = 'Couldn’t download the demo book. Check your connection and try again.';
+			this.loading = false;
+		}
+	}
+
 	async forget(key: string) {
 		await deleteBook(key);
 		forgetState(key);
