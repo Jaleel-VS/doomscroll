@@ -2,7 +2,9 @@
 	import Aside from './Aside.svelte';
 	import Feed from './Feed.svelte';
 	import Icon, { type IconName } from './Icon.svelte';
+	import Lightbox from './Lightbox.svelte';
 	import Settings from './Settings.svelte';
+	import { lightbox } from '#lib/lightbox.svelte.js';
 	import { reader } from '#lib/reader.svelte.js';
 	import type { Book } from '#lib/epub/types.js';
 
@@ -65,7 +67,7 @@
 			target.blur?.();
 			return;
 		}
-		if (target.closest('input, textarea, [contenteditable]') || event.metaKey || event.ctrlKey || event.altKey) return;
+		if (lightbox.photo || target.closest('input, textarea, [contenteditable]') || event.metaKey || event.ctrlKey || event.altKey) return;
 		const id = reader.position;
 		const actions: Record<string, () => void> = {
 			j: () => reader.jump(id + 1, { smooth: true, flash: false }),
@@ -181,6 +183,8 @@
 		</button>
 	</nav>
 </div>
+
+<Lightbox />
 
 <style>
 	.layout {

@@ -2,6 +2,7 @@
 	import Icon from './Icon.svelte';
 	import Rich from './Rich.svelte';
 	import { compact, engagement, reader } from '#lib/reader.svelte.js';
+	import { lightbox } from '#lib/lightbox.svelte.js';
 	import { settings } from '#lib/settings.svelte.js';
 	import type { Book, Post } from '#lib/epub/types.js';
 
@@ -113,7 +114,14 @@
 			{/if}
 
 			{#each post.media as media, m (m)}
-				<img class="card media" class:matte={!media.opaque} src={media.src} alt={media.alt} loading="lazy" />
+				<button
+					class="zoom"
+					aria-label={media.alt ? `Open image: ${media.alt}` : 'Open image'}
+					onclick={(e) =>
+						lightbox.open(e.currentTarget.firstElementChild as HTMLImageElement, { src: media.src, alt: media.alt, matte: !media.opaque })}
+				>
+					<img class="card media" class:matte={!media.opaque} src={media.src} alt={media.alt} loading="lazy" />
+				</button>
 			{/each}
 
 			<div class="actions">
@@ -388,6 +396,14 @@
 	th + td,
 	td + th {
 		border-left: 1px solid var(--border);
+	}
+	.zoom {
+		display: block;
+		max-width: 100%;
+		padding: 0;
+		border: 0;
+		background: none;
+		cursor: zoom-in;
 	}
 	.media {
 		max-width: 100%;

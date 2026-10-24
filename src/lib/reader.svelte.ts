@@ -2,6 +2,7 @@ import { tick } from 'svelte';
 import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import { parseEpub } from './epub/parse';
 import type { Book, Post } from './epub/types';
+import { lightbox } from './lightbox.svelte';
 import { locate, resolve } from './locator';
 import { FONTS, POST_LENGTHS, settings } from './settings.svelte';
 import { renderPostImage, sharePostImage } from './share-image';
@@ -134,6 +135,7 @@ class Reader {
 		this.book = null;
 		this.file = null;
 		this.drawer = false;
+		lightbox.photo = null;
 		document.title = 'Doomscroll';
 	}
 

@@ -66,7 +66,7 @@ The screenshots use public-domain books from [Project Gutenberg](https://www.gut
 | `h1` to `h6`, a large-font CSS class, or a line that matches the table of contents | A section header. |
 | Table of contents (EPUB 3 nav or NCX) | The "What's happening" trends, with post counts and your progress. |
 | `blockquote` | A quote card. |
-| `figure` or image | A media post. The caption is the post text. |
+| `figure` or image | A media post. The caption is the post text. Click the image to open it full screen. |
 | `table` | A table card that keeps `rowspan` and `colspan`. Single-column layout tables are unwrapped. |
 | `pre`, monospace CSS, or a shaded box with one `div` per line | A code card. |
 | Footnote reference (`noteref` type or role, or a superscript link) | The reply count. Click it to read the note as a reply. |
