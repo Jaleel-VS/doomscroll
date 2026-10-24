@@ -58,7 +58,10 @@
 
 <div class="layout" class:drawer={reader.drawer}>
 	<nav class="nav">
-		<button class="logo" title="Back to top" onclick={() => setTab('home')}><Icon name="bird" size={30} /></button>
+		<div class="brand">
+			<button class="logo" title="Back to top" onclick={() => setTab('home')}><Icon name="bird" size={30} /></button>
+			<span class="beta">Beta</span>
+		</div>
 		{#each nav as item (item.label)}
 			{@const on = item.tab ? reader.tab === item.tab : reader.drawer}
 			<button
@@ -91,7 +94,7 @@
 				<button class="mini-avatar" onclick={() => (reader.drawer = true)} aria-label="Chapters">
 					{#if book.cover}<img src={book.cover} alt="" />{:else}<span class="initial">{book.title[0]}</span>{/if}
 				</button>
-				<span class="bird"><Icon name="bird" size={24} /></span>
+				<span class="bird"><Icon name="bird" size={24} /><span class="beta">Beta</span></span>
 				<button class="mini-open" onclick={onpick} aria-label="Open book"><Icon name="book" size={22} /></button>
 			</div>
 			<div class="tabs" role="tablist">
@@ -174,7 +177,15 @@
 		background: rgb(29 155 240 / 0.1);
 	}
 	.bird {
+		display: flex;
+		align-items: center;
+		gap: 6px;
 		color: var(--accent);
+	}
+	.brand {
+		display: flex;
+		align-items: center;
+		gap: 4px;
 	}
 	.nav-item {
 		gap: 20px;
@@ -335,6 +346,10 @@
 		.nav {
 			width: 88px;
 			align-items: center;
+		}
+		.brand {
+			flex-direction: column;
+			gap: 0;
 		}
 		.nav-item span,
 		.post-button span,

@@ -21,7 +21,7 @@
 	<div class="mark"><Icon name="bird" size={360} /></div>
 	<div class="pitch">
 		<h1>Happening now</h1>
-		<h2>Read today.</h2>
+		<h2>Read today. <span class="beta">Beta</span></h2>
 
 		{#if reader.loading}
 			<div class="loading"><span class="spinner"></span> Loading your book…</div>

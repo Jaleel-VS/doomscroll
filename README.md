@@ -6,6 +6,8 @@ Everything runs in your browser. The book is parsed on your device and saved in 
 
 Try it at [doomscroll.jaleel.me](https://doomscroll.jaleel.me). You bring the EPUB.
 
+Doomscroll is in beta. Books with unusual markup can still come out wrong. If a book looks broken, [open an issue](https://github.com/Jaleel-VS/doomscroll/issues) and say which book it was.
+
 ![A thread from Alice's Adventures in Wonderland, with chapters trending in the sidebar](docs/screenshots/thread.png)
 
 ## Run it
