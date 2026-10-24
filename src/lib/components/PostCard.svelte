@@ -22,6 +22,13 @@
 	function openReplies() {
 		if (notes.length) reader.toggle(reader.replies, post.id);
 	}
+
+	let menu = $state(false);
+
+	function pick(action: () => unknown) {
+		menu = false;
+		action();
+	}
 </script>
 
 {#snippet avatar(size: number)}
@@ -104,9 +111,18 @@
 					<button class="action bookmark" class:on={bookmarked} title="Bookmark" onclick={() => reader.toggle(reader.bookmarks, post.id)}>
 						<span class="halo"><Icon name={bookmarked ? 'bookmarked' : 'bookmark'} size={18} /></span>
 					</button>
-					<button class="action share" title="Copy" onclick={() => reader.share(post)}>
-						<span class="halo"><Icon name="share" size={18} /></span>
-					</button>
+					<span class="share-wrap">
+						<button class="action share" title="Share" aria-haspopup="menu" aria-expanded={menu} onclick={() => (menu = !menu)}>
+							<span class="halo"><Icon name="share" size={18} /></span>
+						</button>
+						{#if menu}
+							<button class="menu-scrim" aria-label="Close menu" onclick={() => (menu = false)}></button>
+							<span class="menu" role="menu">
+								<button role="menuitem" onclick={() => pick(() => reader.share(post))}>Copy text</button>
+								<button role="menuitem" onclick={() => pick(() => reader.shareImage(post))}>Share as image</button>
+							</span>
+						{/if}
+					</span>
 				</span>
 			</div>
 
@@ -419,5 +435,45 @@
 	}
 	.replying span {
 		color: var(--accent);
+	}
+	.share-wrap {
+		position: relative;
+	}
+	.menu-scrim {
+		position: fixed;
+		inset: 0;
+		z-index: 30;
+		border: 0;
+		background: transparent;
+		cursor: default;
+	}
+	.menu {
+		position: absolute;
+		right: 0;
+		bottom: calc(100% + 4px);
+		z-index: 31;
+		display: flex;
+		flex-direction: column;
+		min-width: 200px;
+		padding: 4px 0;
+		border-radius: 12px;
+		background: var(--bg);
+		box-shadow:
+			0 0 15px var(--shadow),
+			0 0 3px 1px var(--shadow);
+		overflow: hidden;
+	}
+	.menu button {
+		padding: 12px 16px;
+		border: 0;
+		background: none;
+		color: var(--strong);
+		font: inherit;
+		font-weight: 700;
+		text-align: left;
+		cursor: pointer;
+	}
+	.menu button:hover {
+		background: var(--hover-strong);
 	}
 </style>

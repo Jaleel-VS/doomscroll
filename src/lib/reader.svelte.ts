@@ -3,7 +3,8 @@ import { SvelteSet } from 'svelte/reactivity';
 import { parseEpub } from './epub/parse';
 import type { Book, Post } from './epub/types';
 import { locate, resolve } from './locator';
-import { POST_LENGTHS, settings } from './settings.svelte';
+import { FONTS, POST_LENGTHS, settings } from './settings.svelte';
+import { renderPostImage, sharePostImage } from './share-image';
 import {
 	deleteBook,
 	forgetState,
@@ -179,6 +180,17 @@ class Reader {
 		const text = post.kind === 'code' ? post.code! : post.plain;
 		await navigator.clipboard.writeText(`“${text}”\n— ${names(book.authors) || book.author}, ${book.title}`);
 		this.notify('Copied to clipboard');
+	}
+
+	async shareImage(post: Post) {
+		try {
+			const blob = await renderPostImage(this.book!, post, FONTS[settings.font].stack);
+			const how = await sharePostImage(blob, this.book!.title);
+			this.notify(how === 'shared' ? 'Shared' : 'Image downloaded');
+		} catch (e) {
+			// Closing the share sheet rejects with AbortError; that's a choice, not a failure.
+			if ((e as Error).name !== 'AbortError') this.notify('Couldn’t make the image');
+		}
 	}
 
 	/** Find the next post after `from` containing `query`, wrapping to the start. */

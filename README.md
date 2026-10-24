@@ -73,6 +73,8 @@ Bold, italic, and monospace come from the HTML tags and from the book's CSS clas
 
 The like, repost, reply, and view counts are made up. They come from a hash of each post, so they stay the same between visits. Your likes, reposts, and bookmarks are real and saved per book.
 
+The share button copies a post's text with a credit line, or draws the post as an image in your current theme. On a phone the image goes to the share sheet; on a computer it downloads.
+
 ## Settings
 
 Settings is in the side navigation, or the gear in the bottom bar on a phone. It works like Twitter's display settings, with a live preview of the post you're on.
