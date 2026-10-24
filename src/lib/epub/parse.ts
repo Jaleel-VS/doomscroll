@@ -108,7 +108,12 @@ export async function parseEpub(file: Blob, { limit = POST_LIMIT }: ParseOptions
 	const spine = Array.from(opf.querySelectorAll('spine > itemref'), (el) => byId.get(el.getAttribute('idref') ?? ''))
 		.filter((item): item is ManifestItem => !!item && /html/.test(item.type));
 
-	const toc = await readToc(opf, manifest, byId, read);
+	const { entries: toc, bodymatter } = await readToc(opf, manifest, byId, read);
+	// EPUB 2 guide: `text` is "the first real page of content"; Calibre and Kindle tools also write `start`.
+	const guideStart = ['text', 'start', 'bodymatter']
+		.map((type) => opf.querySelector(`guide > reference[type="${type}" i]`)?.getAttribute('href'))
+		.filter((href): href is string => !!href)
+		.map((href) => resolve(href, opfPath));
 	const coverItem =
 		manifest.find((item) => /\bcover-image\b/.test(item.props)) ??
 		byId.get(opf.querySelector('meta[name="cover"]')?.getAttribute('content') ?? '') ??
@@ -125,6 +130,7 @@ export async function parseEpub(file: Blob, { limit = POST_LIMIT }: ParseOptions
 	const { posts, anchors, notes } = builder;
 
 	const chapters = buildChapters(toc, anchors, posts);
+	const start = findStart([...bodymatter, ...guideStart, builder.bodyDoc, ...tocStarts(toc, title)], anchors, posts, chapters);
 
 	const urls: string[] = [];
 	const types = new Map(manifest.map((item) => [item.href, item.type]));
@@ -163,6 +169,7 @@ export async function parseEpub(file: Blob, { limit = POST_LIMIT }: ParseOptions
 		authors,
 		translators,
 		illustrators,
+		start,
 		handle: handle || 'book',
 		description,
 		year,
@@ -221,6 +228,8 @@ class Builder {
 	anchors = new Map<string, number>();
 	notes = new Map<string, Run[]>();
 	images = new Set<string>();
+	/** First spine document tagged as the body of the book (`epub:type` bodymatter, chapter, or part). */
+	bodyDoc: string | undefined;
 	private classStyles = new Map<string, number>();
 	private loadedCss = new Set<string>();
 	private path = '';
@@ -244,6 +253,11 @@ class Builder {
 		this.path = path;
 		this.anchor(path);
 		const body = doc.getElementsByTagName('body')[0] ?? doc.documentElement;
+		const types = [body, ...Array.from(body.children).slice(0, 2)]
+			.map((el) => el.getAttributeNS(OPS, 'type') ?? el.getAttribute('epub:type') ?? '')
+			.join(' ');
+		if (!this.bodyDoc && /\b(bodymatter|chapter|part)\b/.test(types) && !/\b(frontmatter|backmatter)\b/.test(types))
+			this.bodyDoc = path;
 		this.visit(body, { quote: false, marks: 0 });
 	}
 
@@ -516,19 +530,60 @@ function similar(a: string, b: string) {
 	return !!x && !!y && x.length <= 120 && (x.includes(y) || y.includes(x));
 }
 
+/** Section titles that come before the text proper. "Introduction" and "Prologue" are deliberately not here. */
+const FRONT_MATTER =
+	/^(the )?(cover|title ?page|half ?title|copyright|imprint|dedication|epigraph|(table of )?contents|acknowledge?ments?|about (the|this)|also by|praise|front ?matter|foreword|preface|translator|editor|list of illustrations|frontispiece|colophon|uncopyright)/i;
+
+/**
+ * Guesses from the table of contents, for books that don't mark where they start: the first real entry after a
+ * "Contents" entry (Project Gutenberg's layout), then the first entry that looks like chapter one.
+ */
+function tocStarts(toc: TocEntry[], title: string) {
+	const contents = toc.findIndex((e) => /^(table of )?contents$/i.test(e.title));
+	const afterContents =
+		contents === -1 ? undefined : toc.slice(contents + 1).find((e) => !FRONT_MATTER.test(e.title) && !similar(e.title, title));
+	const chapterOne = toc.find((e) =>
+		/^(chapter|part|book)\s+(1|one|i)\b|^(1|i|one)\s*[.:)\-—]|^(1|i)$|^prologue\b/i.test(e.title)
+	);
+	return [afterContents?.href, chapterOne?.href];
+}
+
+/**
+ * The post where the body of the book starts, from the first candidate (most trusted first) that lands outside the
+ * front matter. `undefined` when nothing usable is found; 0 when the book starts straight away.
+ */
+function findStart(candidates: (string | undefined)[], anchors: Map<string, number>, posts: Post[], chapters: Chapter[]) {
+	for (const href of candidates) {
+		if (!href) continue;
+		const at = anchors.get(href) ?? anchors.get(href.split('#')[0]);
+		if (at === undefined || at >= posts.length) continue;
+		if (at === 0) return 0;
+		if (!FRONT_MATTER.test(chapters[posts[at].chapter]?.title ?? '')) return at;
+	}
+	return undefined;
+}
+
+/** The table of contents, plus the EPUB 3 landmarks that mark where the body of the book starts. */
 async function readToc(
 	opf: Document,
 	manifest: ManifestItem[],
 	byId: Map<string, ManifestItem>,
 	read: (p: string) => Promise<string | null>
-): Promise<TocEntry[]> {
+): Promise<{ entries: TocEntry[]; bodymatter: string[] }> {
 	const navItem = manifest.find((item) => /\bnav\b/.test(item.props));
 	const navSource = navItem && (await read(navItem.href));
+	const bodymatter: string[] = [];
 	if (navItem && navSource) {
 		const doc = html(navSource);
 		const navs = [...doc.getElementsByTagName('nav')];
-		const nav =
-			navs.find((n) => /\btoc\b/.test(n.getAttributeNS(OPS, 'type') ?? n.getAttribute('epub:type') ?? '')) ?? navs[0];
+		const typeOf = (el: Element) => el.getAttributeNS(OPS, 'type') ?? el.getAttribute('epub:type') ?? '';
+		for (const landmarks of navs.filter((n) => /\blandmarks\b/.test(typeOf(n)))) {
+			for (const a of landmarks.getElementsByTagName('a')) {
+				const href = a.getAttribute('href');
+				if (href && /\bbodymatter\b/.test(typeOf(a))) bodymatter.push(resolve(href, navItem.href));
+			}
+		}
+		const nav = navs.find((n) => /\btoc\b/.test(typeOf(n))) ?? navs[0];
 		const entries = [...(nav?.getElementsByTagName('a') ?? [])]
 			.filter((a) => a.getAttribute('href'))
 			.map((a) => ({
@@ -536,19 +591,20 @@ async function readToc(
 				href: resolve(a.getAttribute('href')!, navItem.href),
 				depth: depthOf(a, 'ol', nav!)
 			}));
-		if (entries.length) return entries;
+		if (entries.length) return { entries, bodymatter };
 	}
 	const ncxItem =
 		byId.get(opf.querySelector('spine')?.getAttribute('toc') ?? '') ??
 		manifest.find((item) => item.type === 'application/x-dtbncx+xml');
 	const ncxSource = ncxItem && (await read(ncxItem.href));
-	if (!ncxItem || !ncxSource) return [];
+	if (!ncxItem || !ncxSource) return { entries: [], bodymatter };
 	const ncx = xml(ncxSource);
-	return Array.from(ncx.getElementsByTagNameNS('*', 'navPoint'), (point) => ({
+	const entries = Array.from(ncx.getElementsByTagNameNS('*', 'navPoint'), (point) => ({
 		title: (point.getElementsByTagNameNS('*', 'text')[0]?.textContent ?? '').replace(/\s+/g, ' ').trim(),
 		href: resolve(point.getElementsByTagNameNS('*', 'content')[0]?.getAttribute('src') ?? '', ncxItem.href),
 		depth: depthOf(point, 'navPoint', ncx.documentElement)
 	})).filter((e) => e.title);
+	return { entries, bodymatter };
 }
 
 function depthOf(el: Element, tag: string, root: Element) {

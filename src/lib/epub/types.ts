@@ -46,6 +46,8 @@ export type Book = {
 	authors: string[];
 	translators: string[];
 	illustrators: string[];
+	/** First post of the body of the book, past the title page, copyright, and other front matter, if found. */
+	start?: number;
 	handle: string;
 	description: string;
 	year: string;

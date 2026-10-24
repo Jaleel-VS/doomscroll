@@ -128,6 +128,10 @@
 					{:else}
 						<div class="big-avatar initial">{book.title[0]}</div>
 					{/if}
+					{#if book.start}
+						<!-- Where X puts "Follow": skip the title page, copyright, and other front matter. -->
+						<button class="start" onclick={() => reader.jump(book.start!)}>Start reading</button>
+					{/if}
 					<h1>{book.title} <Icon name="verified" size={22} class="badge" /></h1>
 					<div class="muted">{credits}</div>
 					{#if book.description}<p class="bio">{book.description}</p>{/if}
@@ -182,6 +186,24 @@
 	.profile-body {
 		position: relative;
 		padding: 0 16px 16px;
+	}
+	.start {
+		position: absolute;
+		top: 12px;
+		right: 16px;
+		height: 36px;
+		padding: 0 16px;
+		border: 0;
+		border-radius: 999px;
+		background: var(--fg);
+		color: var(--bg);
+		font: inherit;
+		font-weight: 700;
+		cursor: pointer;
+		transition: opacity 0.2s;
+	}
+	.start:hover {
+		opacity: 0.9;
 	}
 	.big-avatar {
 		width: 134px;
