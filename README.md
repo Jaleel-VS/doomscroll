@@ -45,7 +45,7 @@ Settings has a live preview of the post you're on, like Twitter's display settin
 
 ![The Settings page with font size, font, color, background, and post length](docs/screenshots/settings.png)
 
-On a phone you get the mobile layout: a bottom tab bar, and a drawer for search and chapters that opens when you tap your avatar.
+On a phone you get the mobile layout: a bottom tab bar, and a drawer for search and chapters that opens when you tap your avatar. Like X, the header follows your finger: it slides away as you scroll down and comes back as soon as you scroll up.
 
 | Feed | Chapters |
 | --- | --- |

@@ -30,6 +30,34 @@
 		}
 	}
 
+	/*
+	 * On phones the header follows the finger, like X: scrolling down slides it up by the same distance until it's
+	 * gone, and scrolling up pulls it back. Scrolls the app makes itself (jumps, and keeping your place while posts
+	 * load above) don't move it.
+	 */
+	const phone = matchMedia('(max-width: 640px)');
+	let headerHeight = $state(0);
+	let shift = $state(0);
+	let lastY = 0;
+
+	function followScroll() {
+		const y = window.scrollY;
+		const dy = y - lastY;
+		lastY = y;
+		if (!phone.matches || reader.tab !== 'home' || reader.drawer || y <= 0) {
+			shift = 0;
+			return;
+		}
+		// Hold still while the app scrolls on its own or while you type a reply.
+		if (performance.now() < reader.quietUntil || document.activeElement?.tagName === 'TEXTAREA') return;
+		shift = Math.min(Math.max(shift + dy, 0), headerHeight);
+	}
+
+	// A jump lands posts just under the full header, so show it.
+	$effect(() => {
+		if (reader.jumping || reader.tab !== 'home' || reader.drawer) shift = 0;
+	});
+
 	function onkeydown(event: KeyboardEvent) {
 		const target = event.target as HTMLElement;
 		if (event.key === 'Escape') {
@@ -62,7 +90,7 @@
 	}
 </script>
 
-<svelte:window {onkeydown} />
+<svelte:window {onkeydown} onscroll={followScroll} />
 
 <div class="layout" class:drawer={reader.drawer}>
 	<nav class="nav">
@@ -96,8 +124,8 @@
 		</button>
 	</nav>
 
-	<main class="main">
-		<header class="header">
+	<main class="main" style:--header-shift="{shift}px">
+		<header class="header" bind:offsetHeight={headerHeight}>
 			<div class="mobile-bar">
 				<button class="mini-avatar" onclick={() => (reader.drawer = true)} aria-label="Chapters">
 					{#if book.cover}<img src={book.cover} alt="" />{:else}<span class="initial">{book.title[0]}</span>{/if}
@@ -118,8 +146,8 @@
 					</button>
 				</div>
 			{/if}
-			<div class="progress" style:transform="scaleX({reader.progress})"></div>
 		</header>
+		<div class="progress" style:transform="scaleX({reader.progress})"></div>
 		{#if reader.tab === 'settings'}
 			<Settings {book} />
 		{:else}
@@ -295,6 +323,7 @@
 		backdrop-filter: blur(12px);
 		-webkit-backdrop-filter: blur(12px);
 		border-bottom: 1px solid var(--border);
+		transform: translateY(calc(-1 * var(--header-shift, 0px)));
 	}
 	.mobile-bar {
 		display: none;
@@ -364,15 +393,17 @@
 		border-radius: 2px;
 		background: var(--accent);
 	}
+	/* Outside the header so it stays on screen when the phone header slides away. */
 	.progress {
-		position: absolute;
-		left: 0;
-		right: 0;
-		bottom: -1px;
+		position: sticky;
+		top: max(0px, calc(var(--header-h) - 2px - var(--header-shift, 0px)));
+		z-index: 11;
 		height: 2px;
+		margin-top: -2px;
 		background: var(--accent);
 		transform-origin: left;
 		opacity: 0.8;
+		pointer-events: none;
 	}
 
 	/* Right column */

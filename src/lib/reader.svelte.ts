@@ -32,6 +32,8 @@ class Reader {
 	end = $state(0);
 	/** True while `jump` owns the scroll position; the feed must not re-anchor meanwhile. */
 	jumping = $state(false);
+	/** Until this `performance.now()` time, scrolling is the app's doing, not the reader's (see the phone header). */
+	quietUntil = 0;
 
 	tab = $state<'home' | 'bookmarks' | 'settings'>('home');
 	drawer = $state(false);
@@ -145,6 +147,8 @@ class Reader {
 		const book = this.book;
 		if (!book || id < 0 || id >= book.posts.length) return;
 		this.jumping = true;
+		// Covers smooth scrolling, which keeps firing scroll events after `jump` returns.
+		this.quietUntil = performance.now() + 700;
 		this.tab = 'home';
 		this.drawer = false;
 		if (id < this.start || id >= this.end) {

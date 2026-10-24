@@ -54,6 +54,7 @@
 		if (!pinned?.el.isConnected || pinned.scrollY !== window.scrollY) return pin();
 		const delta = pinned.el.getBoundingClientRect().top - pinned.top;
 		if (!delta) return;
+		reader.quietUntil = Math.max(reader.quietUntil, performance.now() + 100);
 		window.scrollBy(0, delta);
 		pinned.scrollY = window.scrollY;
 	}
