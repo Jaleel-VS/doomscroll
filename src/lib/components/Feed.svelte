@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
+	import { fly } from 'svelte/transition';
 	import Icon from './Icon.svelte';
 	import PostCard from './PostCard.svelte';
 	import { compact, names, reader } from '#lib/reader.svelte.js';
@@ -26,6 +27,9 @@
 	let top = $state<HTMLElement>();
 	let bottom = $state<HTMLElement>();
 	let filling = false;
+	let profile = $state<HTMLElement>();
+	/** The profile, with its own Start reading button, has scrolled under the header (or isn't rendered). */
+	let pastProfile = $state(false);
 
 	const visible = $derived(book.posts.slice(reader.start, reader.end));
 
@@ -90,6 +94,8 @@
 			if (reader.tab !== 'home') return;
 			const el = topPost();
 			if (el) reader.setPosition(Number(el.dataset.i));
+			const header = document.querySelector('.header')?.getBoundingClientRect().bottom ?? 0;
+			pastProfile = !profile?.isConnected || profile.getBoundingClientRect().bottom < header;
 			fill();
 		});
 	}
@@ -113,14 +119,33 @@
 	});
 
 	onMount(() => () => cancelAnimationFrame(frame));
+
+	// Like X's "New posts" pill: offered while you're scrolling through the front matter, until you use or close it.
+	const startTitle = $derived(book.start === undefined ? '' : (book.chapters[book.posts[book.start].chapter]?.title ?? ''));
+	const showPill = $derived(
+		book.start !== undefined && !reader.startDismissed && pastProfile && reader.position < book.start
+	);
 </script>
 
 <svelte:window {onscroll} />
 
 <div class="feed" bind:this={feed}>
 	{#if reader.tab === 'home'}
+		<div class="pill-lane">
+			{#if showPill}
+				<div class="pill" transition:fly={{ y: -16, duration: 200 }}>
+					<button class="pill-go" onclick={() => reader.jump(book.start!)}>
+						<Icon name="down" size={16} />
+						<span>Go to {startTitle}</span>
+					</button>
+					<button class="pill-close" aria-label="Dismiss" onclick={() => reader.dismissStart()}>
+						<Icon name="close" size={14} />
+					</button>
+				</div>
+			{/if}
+		</div>
 		{#if reader.start === 0}
-			<section class="profile">
+			<section class="profile" bind:this={profile}>
 				<div class="banner" style:background-image={book.cover ? `url(${book.cover})` : undefined}></div>
 				<div class="profile-body">
 					{#if book.cover}
@@ -169,6 +194,59 @@
 <style>
 	.feed {
 		min-height: 100vh;
+	}
+	/* A zero-height sticky lane centres the pill in the feed column just under the header, whatever the layout. */
+	.pill-lane {
+		position: sticky;
+		top: calc(var(--header-h) - var(--header-shift, 0px) + 12px);
+		z-index: 9;
+		display: flex;
+		align-items: flex-start;
+		justify-content: center;
+		height: 0;
+	}
+	.pill {
+		display: flex;
+		align-items: center;
+		max-width: calc(100% - 32px);
+		border-radius: 999px;
+		background: var(--accent);
+		color: var(--on-accent);
+		box-shadow:
+			0 0 10px var(--shadow),
+			0 1px 3px 1px var(--shadow);
+	}
+	.pill button {
+		display: flex;
+		align-items: center;
+		border: 0;
+		background: none;
+		color: inherit;
+		font: inherit;
+		cursor: pointer;
+	}
+	.pill-go {
+		gap: 6px;
+		min-width: 0;
+		height: 38px;
+		padding: 0 6px 0 16px;
+		font-weight: 700;
+	}
+	.pill-go span {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.pill-close {
+		justify-content: center;
+		flex: none;
+		width: 28px;
+		height: 28px;
+		margin-right: 5px;
+		border-radius: 50%;
+	}
+	.pill-close:hover {
+		background: rgb(0 0 0 / 0.15);
 	}
 	.profile {
 		border-bottom: 1px solid var(--border);

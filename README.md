@@ -33,7 +33,7 @@ pnpm check    # svelte-check
 
 ## What it looks like
 
-The top of the feed is the book's profile: the cover is the avatar, and the header lists the authors, the publication year, and the chapter and post counts. Where X has a **Follow** button, Doomscroll has **Start reading**, which skips the title page, copyright page, and other front matter.
+The top of the feed is the book's profile: the cover is the avatar, and the header lists the authors, the publication year, and the chapter and post counts. Where X has a **Follow** button, Doomscroll has **Start reading**, which skips the title page, copyright page, and other front matter. Once you scroll past the profile into the front matter, a floating pill like X's "New posts" offers the same jump, for example **Go to I: Down the Rabbit-Hole**. Close it with the ✕ and it stays closed for that book.
 
 ![The profile header for Alice's Adventures in Wonderland](docs/screenshots/profile.png)
 

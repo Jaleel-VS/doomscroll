@@ -42,6 +42,8 @@ class Reader {
 	flash = $state(-1);
 	/** The last successful search, highlighted in posts until the search box is cleared. */
 	query = $state('');
+	/** The reader closed the floating "Go to chapter 1" pill for this book. */
+	startDismissed = $state(false);
 
 	likes = new SvelteSet<number>();
 	reposts = new SvelteSet<number>();
@@ -89,6 +91,7 @@ class Reader {
 			this.reposts = new SvelteSet(state.reposts.map(toId));
 			this.bookmarks = new SvelteSet(state.bookmarks.map(toId));
 			this.expanded = new SvelteSet();
+			this.startDismissed = state.startDismissed;
 			this.mine = new SvelteMap();
 			for (const { mark, text, time } of state.replies) {
 				const id = toId(mark);
@@ -257,12 +260,18 @@ class Reader {
 			likes: marks(this.likes),
 			reposts: marks(this.reposts),
 			bookmarks: marks(this.bookmarks),
-			replies: [...this.mine].flatMap(([id, list]) => list.map((r) => ({ mark: locate(book, id), ...r })))
+			replies: [...this.mine].flatMap(([id, list]) => list.map((r) => ({ mark: locate(book, id), ...r }))),
+			startDismissed: this.startDismissed
 		});
 	}
 
 	reply(id: number, text: string) {
 		this.mine.set(id, [...(this.mine.get(id) ?? []), { text, time: Date.now() }]);
+		this.persist();
+	}
+
+	dismissStart() {
+		this.startDismissed = true;
 		this.persist();
 	}
 

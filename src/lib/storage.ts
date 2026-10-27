@@ -24,6 +24,8 @@ export type ReadingState = {
 	reposts: Mark[];
 	bookmarks: Mark[];
 	replies: SavedReply[];
+	/** The reader closed the "Go to chapter 1" pill for this book. */
+	startDismissed: boolean;
 };
 
 const DB = 'doomscroll';
@@ -53,7 +55,7 @@ export const listBooks = async () =>
 	(await transact<SavedBook[]>('readonly', (s) => s.getAll())).sort((a, b) => b.opened - a.opened);
 
 export function loadState(key: string): ReadingState {
-	const empty: ReadingState = { progress: 0, position: 0, likes: [], reposts: [], bookmarks: [], replies: [] };
+	const empty: ReadingState = { progress: 0, position: 0, likes: [], reposts: [], bookmarks: [], replies: [], startDismissed: false };
 	try {
 		const saved = JSON.parse(localStorage.getItem(`state:${key}`) ?? '{}');
 		// Older saves stored `position` as an id plus the post count instead of a progress fraction.
